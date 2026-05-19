@@ -9,7 +9,7 @@ export const sendOtp = async (req, res) => {
   let { pNo } = req.body;
   try {
     pNo = pNo.startsWith('+') ? pNo : `+91${pNo}`;
-    const otp = Math.floor(10_000 + Math.random() * 9_00_000).toString();
+    const otp = Math.floor(1_00_000 + Math.random() * 999999).toString();
     const expiresAt = Date.now() + 5 * 60 * 1000; 
     otpStore.set(pNo, { otp, expiresAt });
     console.log(`OTP for ${pNo}: ${otp}`);

@@ -7,6 +7,7 @@ import dns from 'dns';
 import helmet from 'helmet';
 import morganMiddleware from './config/logger.js';
 import http from 'node:http';
+import compression from "compression";
 import { initSocket } from './config/socket.js';
 dns.setServers(['1.1.1.1', '8.8.8.8']);
 const app = express();
@@ -22,7 +23,7 @@ app.use(
     exposedHeaders: ['Set-Cookie'],
   })
 );
-
+app.use(compression());
 app.use(helmet());
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));

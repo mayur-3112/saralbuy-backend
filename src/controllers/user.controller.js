@@ -10,7 +10,7 @@ export const sendOtp = async (req, res) => {
   try {
     pNo = pNo.startsWith('+') ? pNo : `+91${pNo}`;
     const otp = Math.floor(1_00_000 + Math.random() * 999999).toString();
-    const expiresAt = Date.now() + 5 * 60 * 1000; 
+    const expiresAt = Date.now() + 5 * 60 * 1000;
     otpStore.set(pNo, { otp, expiresAt });
     console.log(`OTP for ${pNo}: ${otp}`);
 
@@ -180,7 +180,8 @@ export const factorVerifyOtp = async (req, res) => {
 // Get user profile
 export const getProfile = async (req, res) => {
   try {
-    const user = await userSchema.findById(req.user._id).select('-password');
+    const { userId } = req.query;
+    const user = await userSchema.findById(userId || req.user._id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.status(200).json(user);
   } catch (err) {

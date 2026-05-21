@@ -180,8 +180,8 @@ export const factorVerifyOtp = async (req, res) => {
 // Get user profile
 export const getProfile = async (req, res) => {
   try {
-    const { userId } = req.query;
-    const user = await userSchema.findById(userId || req.user._id).select('-password');
+
+    const user = await userSchema.findById(req.user._id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.status(200).json(user);
   } catch (err) {
@@ -190,6 +190,17 @@ export const getProfile = async (req, res) => {
   }
 };
 
+export const getUserProfile = async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const user = await userSchema.findById(userId).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.status(200).json(user);
+  } catch (err) {
+    console.log(err);
+    res.status(400).json({ message: err.message });
+  }
+};
 export const updateProfile = async (req, res) => {
   try {
     let {

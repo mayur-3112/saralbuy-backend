@@ -17,6 +17,7 @@ router.post('/verify-otp', verifyController);
 router.get('/logout', auth, userController.logout);
 
 router.get('/profile', auth, userController.getProfile);
+router.get('/user-profile', userController.getUserProfile);
 router.post('/update-profile', auth, allowUploadFields(), userController.updateProfile);
 
 // router.post('/address', auth, userController.addAddress);

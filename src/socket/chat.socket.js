@@ -114,7 +114,6 @@ const chatSocket = (io, socket) => {
     }
   });
 
-  //  Join a chat room ───────────────────────────────────────
   // Join a chat room ───────────────────────────────────────
   socket.on(SOCKET_EVENTS.JOIN_ROOM, async ({ roomId, buyerId, sellerId, productId }) => {
     socket.join(roomId);
@@ -143,7 +142,7 @@ const chatSocket = (io, socket) => {
       socket.emit(SOCKET_EVENTS.RECEIVE_MESSAGE, { roomId, messages: chat.messages });
     }
 
-    // ✅ Check for ANY deal on this room and restore state for both buyer and seller
+    //  Check for ANY deal on this room and restore state for both buyer and seller
     const latestDeal = await closeDealSchema
       .findOne({ roomId })
       .sort({ createdAt: -1 }) // get the most recent deal
@@ -153,7 +152,7 @@ const chatSocket = (io, socket) => {
       const isSeller = chat && chat.sellerId.toString() === userId.toString();
       const isBuyer = chat && chat.buyerId.toString() === userId.toString();
 
-      // ✅ Seller: show approval popup if deal is still pending their response
+      //  Seller: show approval popup if deal is still pending their response
       if (isSeller && latestDeal.closedDealStatus === 'waiting_seller_approval') {
         socket.emit(SOCKET_EVENTS.PENDING_DEAL, {
           dealId: latestDeal._id.toString(),
@@ -164,7 +163,7 @@ const chatSocket = (io, socket) => {
         });
       }
 
-      // ✅ Both buyer AND seller: restore final status on refresh
+      //  Both buyer AND seller: restore final status on refresh
       if (
         latestDeal.closedDealStatus === 'completed' ||
         latestDeal.closedDealStatus === 'rejected'
@@ -179,7 +178,7 @@ const chatSocket = (io, socket) => {
         });
       }
 
-      // ✅ Buyer: restore "waiting" state (deal sent, seller hasn't responded yet)
+      //  Buyer: restore "waiting" state (deal sent, seller hasn't responded yet)
       if (isBuyer && latestDeal.closedDealStatus === 'waiting_seller_approval') {
         socket.emit(SOCKET_EVENTS.DEAL_STATUS_UPDATE, {
           roomId,
@@ -230,13 +229,13 @@ const chatSocket = (io, socket) => {
         return;
       }
 
-      // ✅ Broadcast message to everyone IN the room (buyer + seller if both on chat page)
+      //  Broadcast message to everyone IN the room (buyer + seller if both on chat page)
       io.to(roomId).emit(SOCKET_EVENTS.RECEIVE_MESSAGE, {
         roomId,
         message: { ...newMsg, id: Date.now().toString(), text: newMsg.message },
       });
 
-      // ✅ Find the PARTNER's userId to notify their navbar directly
+      //  Find the PARTNER's userId to notify their navbar directly
       const partnerId =
         senderType === 'buyer'
           ? updated.sellerId.toString() // buyer sent → notify seller

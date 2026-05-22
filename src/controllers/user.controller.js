@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { ApiResponse } from '../helpers/ApiReponse.js';
 import userSchema from '../models/user.schema.js';
 import uploadFile from '../config/imageKit.config.js';
+import { authCookieOptions } from '../utils/cookieOptions.js';
 
 const otpStore = new Map();
 
@@ -32,19 +33,15 @@ export const verifyOtp = async (req, res) => {
       return ApiResponse.errorResponse(res, 400, 'No OTP found for this number');
     }
 
-    // Check expiry
     if (otpData.expiresAt < Date.now()) {
       otpStore.delete(pNo);
       return ApiResponse.errorResponse(res, 400, 'OTP expired');
     }
-
-    // Check OTP
     if (otpData.otp !== otp) {
       return ApiResponse.errorResponse(res, 400, 'Invalid OTP');
     }
 
-    // ✅ OTP verified
-    otpStore.delete(pNo); // cleanup after success
+    otpStore.delete(pNo);
 
     let user = await userSchema.findOne({ phone: pNo });
     if (!user) {
@@ -53,21 +50,7 @@ export const verifyOtp = async (req, res) => {
 
     const payload = { _id: user._id, phone: user.phone };
     const token = user.generateAuthToken();
-    // res.cookie('authToken', token, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === 'production',
-    //   // sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    //   sameSite:'None',
-    //   maxAge: 7 * 24 * 60 * 60 * 1000,
-    //   path: '/',
-    // });
-    res.cookie('authToken', token, {
-      sameSite: 'None',
-      httpOnly: true,
-      secure: true,
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('authToken', token, authCookieOptions);
 
     return ApiResponse.successResponse(res, 200, 'Otp verified successfully', {
       token,
@@ -160,14 +143,7 @@ export const factorVerifyOtp = async (req, res) => {
     const token = user.generateAuthToken();
     user.lastLogin = new Date();
     await user.save();
-    res.cookie('authToken', token, {
-      sameSite: 'None',
-      httpOnly: true,
-      secure: true,
-      path: '/',
-      partitioned: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('authToken', token,authCookieOptions);
 
     return ApiResponse.successResponse(res, 200, 'OTP verified successfully', {
       token,
@@ -266,11 +242,7 @@ export const updateProfile = async (req, res) => {
 export const logout = (req, res) => {
   const user = req.user;
   if (!user) return ApiResponse.errorResponse(res, 401, 'User not logged in');
-  res.clearCookie('authToken', {
-    sameSite: 'None',
-    httpOnly: true,
-    secure: true,
-    path: '/',
-  });
+  const {maxAge,...clearOptions }= authCookieOptions;
+  res.clearCookie('authToken',clearOptions);
   res.status(200).json({ message: 'Logged out' });
 };

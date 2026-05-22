@@ -269,6 +269,7 @@ export const logout = (req, res) => {
     httpOnly: true,
     secure: true,
     path: '/',
+    partitioned: true,
   });
   res.status(200).json({ message: 'Logged out' });
 };

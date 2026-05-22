@@ -7,6 +7,7 @@ export const GetCategories = async (req, res) => {
   try {
     const isCacheData = await redisHelper.get('categories');
     if (isCacheData) {
+      console.log('cache categories...');
       return ApiResponse.successResponse(res, 200, 'categories fetched successfully', isCacheData);
     }
     const categories = await categorySchema.find().lean();

@@ -62,10 +62,11 @@ export const verifyOtp = async (req, res) => {
     //   path: '/',
     // });
     res.cookie('authToken', token, {
-      sameSite: 'none',
+      sameSite: 'None',
       httpOnly: true,
       secure: true,
       path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return ApiResponse.successResponse(res, 200, 'Otp verified successfully', {
@@ -165,6 +166,7 @@ export const factorVerifyOtp = async (req, res) => {
       secure: true,
       path: '/',
       partitioned: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return ApiResponse.successResponse(res, 200, 'OTP verified successfully', {
@@ -265,11 +267,10 @@ export const logout = (req, res) => {
   const user = req.user;
   if (!user) return ApiResponse.errorResponse(res, 401, 'User not logged in');
   res.clearCookie('authToken', {
-    sameSite: 'none',
+    sameSite: 'None',
     httpOnly: true,
     secure: true,
     path: '/',
-    partitioned: true,
   });
   res.status(200).json({ message: 'Logged out' });
 };

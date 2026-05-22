@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import morganMiddleware from './config/logger.js';
 import http from 'node:http';
 import compression from 'compression';
+import prettyMilliseconds from 'pretty-ms'; 
 import { initSocket } from './config/socket.js';
 dns.setServers(['1.1.1.1', '8.8.8.8']);
 const app = express();
@@ -44,8 +45,8 @@ app.use((err, req, res, next) => {
 app.get('/health', (req, res) => {
   return res.status(200).json({
     status:'UP',
-    uptime:process.uptime(),
-    timestamp: Date.now(),
+    uptime:prettyMilliseconds(process.uptime() * 1000),
+    timestamp: new Date().toLocaleString()
   })
 });
 

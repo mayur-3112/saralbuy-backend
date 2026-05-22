@@ -42,7 +42,12 @@ app.use((err, req, res, next) => {
 });
 
 app.get('/health', (req, res) => {
-  res.end('ok');
+  return res.status(200).json({
+    status:'UP',
+    uptime:process.uptime(),
+    timestamp: new Date().toISOString(),
+    memoryUsage: process.memoryUsage() * 1024 * 1024,
+  })
 });
 
 export default server;

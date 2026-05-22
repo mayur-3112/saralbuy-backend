@@ -38,7 +38,7 @@ const productNotificationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-productNotificationSchema.index({ createdAt: 1 },{expireAfterSeconds: 30 * 24 * 60 * 60});
+productNotificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
 productNotificationSchema.index({ recipientId: 1, seen: 1 });
 productNotificationSchema.index({ productId: 1 });

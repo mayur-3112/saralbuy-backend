@@ -1,10 +1,16 @@
 import { isValidObjectId } from 'mongoose';
 import { ApiResponse } from '../helpers/ApiReponse.js';
 import categorySchema from '../models/category.schema.js';
-
+import redisClient from '../config/redis-config.js';
+import redisHelper from '../helpers/redisHelper.js';
 export const GetCategories = async (req, res) => {
   try {
+    const isCacheData = await redisHelper.get('categories');
+    if (isCacheData) {
+      return ApiResponse.successResponse(res, 200, 'categories fetched successfully', isCacheData);
+    }
     const categories = await categorySchema.find().lean();
+    await redisHelper.set('categories', categories);
     return ApiResponse.successResponse(res, 200, 'categories fetched successfully', categories);
   } catch (error) {
     return ApiResponse.errorResponse(res, 400, error?.response || error, null);

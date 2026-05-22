@@ -9,7 +9,7 @@ export default function mongoCtx() {
     .connect(process.env.DB_CTX, {
       dbName: 'saralbuy',
       maxPoolSize: 10,
-      family: 4, 
+      family: 4,
     })
     .then(() => {
       console.log(

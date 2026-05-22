@@ -143,7 +143,7 @@ export const factorVerifyOtp = async (req, res) => {
     const token = user.generateAuthToken();
     user.lastLogin = new Date();
     await user.save();
-    res.cookie('authToken', token,authCookieOptions);
+    res.cookie('authToken', token, authCookieOptions);
 
     return ApiResponse.successResponse(res, 200, 'OTP verified successfully', {
       token,
@@ -158,7 +158,6 @@ export const factorVerifyOtp = async (req, res) => {
 // Get user profile
 export const getProfile = async (req, res) => {
   try {
-
     const user = await userSchema.findById(req.user._id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.status(200).json(user);
@@ -242,7 +241,7 @@ export const updateProfile = async (req, res) => {
 export const logout = (req, res) => {
   const user = req.user;
   if (!user) return ApiResponse.errorResponse(res, 401, 'User not logged in');
-  const {maxAge,...clearOptions }= authCookieOptions;
-  res.clearCookie('authToken',clearOptions);
+  const { maxAge, ...clearOptions } = authCookieOptions;
+  res.clearCookie('authToken', clearOptions);
   res.status(200).json({ message: 'Logged out' });
 };

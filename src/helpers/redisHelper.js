@@ -10,13 +10,11 @@ class RedisHelper {
       throw new Error('KEY AND VALUE IS REQUIRED');
     }
 
-    await this.redisClient.set(
+   return  await this.redisClient.set(
       key,
       JSON.stringify(value),
       { EX: ttl }
     );
-
-    return true;
   }
 
   async get(key) {
@@ -27,7 +25,7 @@ class RedisHelper {
       return JSON.parse(result);
     }
 
-    return false;
+    return null;
   }
 }
 

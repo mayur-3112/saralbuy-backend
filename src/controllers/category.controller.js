@@ -6,7 +6,7 @@ import redisHelper from '../helpers/redisHelper.js';
 export const GetCategories = async (req, res) => {
   try {
     const isCacheData = await redisHelper.get('categories');
-    if (isCacheData) {
+    if (isCacheData !== false) {
       console.log('cache categories...');
       return ApiResponse.successResponse(res, 200, 'categories fetched successfully', isCacheData);
     }

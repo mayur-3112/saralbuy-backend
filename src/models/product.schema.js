@@ -12,6 +12,10 @@ const productSchema = new mongoose.Schema(
     quantity: {
       type: String,
     },
+    quantityUnit:{
+      type:String,
+      default:null
+    },
     minimumBudget: { type: Number },
     description: { type: String },
     draft: { type: Boolean, default: false },
@@ -68,6 +72,7 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
   },
   {
     timestamps: true,

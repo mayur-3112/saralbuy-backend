@@ -12,6 +12,7 @@ export const addProduct = async (req, res) => {
     const image = req.files?.image?.[0];
     const document = req.files?.document?.[0];
     const body = { ...req.body };
+    console.log('CREATE PRODUCT BODY:', body);
     ['paymentAndDelivery', 'oldProductValue'].forEach(key => {
       if (typeof body[key] === 'string') {
         try {
@@ -56,10 +57,12 @@ export const addProduct = async (req, res) => {
       additionalDeliveryAndPackage: body.additionalDeliveryAndPackage,
       paymentAndDelivery: body.paymentAndDelivery,
       bidActiveDuration: body.bidActiveDuration,
+      quantityUnit: body.quantityUnit,
     });
 
     // create a requirement
-    await requirementSchema.create([
+   if(body.draft === 'false'){
+     await requirementSchema.create([
       {
         productId: product._id,
         buyerId: req.user._id,
@@ -67,6 +70,7 @@ export const addProduct = async (req, res) => {
       },
     ]);
 
+   }
     return ApiResponse.successResponse(res, 201, 'Product created successfully', product);
   } catch (error) {
     console.log(error);

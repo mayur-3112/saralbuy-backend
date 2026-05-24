@@ -46,7 +46,7 @@ app.get('/health', (req, res) => {
   return res.status(200).json({
     status: 'UP',
     uptime: prettyMilliseconds(process.uptime() * 1000),
-    timestamp: new Date().toLocaleString(),
+    timestamp: Date.now(),
   });
 });
 

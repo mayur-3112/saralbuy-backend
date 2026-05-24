@@ -3,6 +3,7 @@ import { ApiResponse } from '../helpers/ApiReponse.js';
 import userSchema from '../models/user.schema.js';
 import uploadFile from '../config/imageKit.config.js';
 import { authCookieOptions } from '../utils/cookieOptions.js';
+import redisHelper from '../helpers/redisHelper.js';
 
 const otpStore = new Map();
 
@@ -158,8 +159,18 @@ export const factorVerifyOtp = async (req, res) => {
 // Get user profile
 export const getProfile = async (req, res) => {
   try {
+    if (await redisHelper.get(`user_${req.user._id}`)) {
+      console.log('cache user...');
+      return ApiResponse.successResponse(
+        res,
+        200,
+        'user fetched successfully',
+        await redisHelper.get(`user_${req.user._id}`)
+      );
+    }
     const user = await userSchema.findById(req.user._id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
+    await redisHelper.set(`user_${req.user._id}`, user, 24 * 60 * 60);
     res.status(200).json(user);
   } catch (err) {
     console.log(err);
@@ -243,5 +254,7 @@ export const logout = (req, res) => {
   if (!user) return ApiResponse.errorResponse(res, 401, 'User not logged in');
   const { maxAge, ...clearOptions } = authCookieOptions;
   res.clearCookie('authToken', clearOptions);
+  // remove from redis cache
+  redisHelper.del(`user_${user._id}`);
   res.status(200).json({ message: 'Logged out' });
 };

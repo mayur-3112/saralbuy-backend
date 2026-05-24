@@ -298,33 +298,59 @@ export const createBid = async (req, res) => {
     //  Requirement logic
     let requirement = await requirementSchema.findOne({ productId, buyerId }, null, { session });
 
-    if (requirement) {
-      requirement.sellers.push({
-        sellerId,
-        budgetAmount: budgetQuation,
-        bidId: createdBid._id,
-      });
-
-      await requirement.save({ session });
-    } else {
-      requirement = await requirementSchema.create(
-        [
-          {
-            productId,
-            buyerId,
-            sellers: [
-              {
-                sellerId,
-                budgetAmount: budgetQuation,
-                bidId: createdBid._id,
-              },
-            ],
-          },
-        ],
-        { session }
+    if (!requirement) {
+      return ApiResponse.errorResponse(
+        res,
+        404,
+        'Requirement not found for this product and buyer'
       );
-      requirement = requirement[0];
     }
+    const updatedRequirement = await requirementSchema.findOneAndUpdate(
+      { productId, buyerId },
+      {
+        $push: {
+          sellers: {
+            sellerId,
+            budgetAmount: budgetQuation,
+            bidId: createdBid._id,
+          },
+        },
+      },
+      { new: true, session }
+    );
+
+    if (!updatedRequirement) {
+      throw new Error('Requirement not found for this product and buyer');
+    }
+
+    // if (requirement) {
+    //   requirement.sellers.push({
+    //     sellerId,
+    //     budgetAmount: budgetQuation,
+    //     bidId: createdBid._id,
+    //   });
+
+    //   await requirement.save({ session });
+    // } else {
+
+    //   requirement = await requirementSchema.create(
+    //     [
+    //       {
+    //         productId,
+    //         buyerId,
+    //         sellers: [
+    //           {
+    //             sellerId,
+    //             budgetAmount: budgetQuation,
+    //             bidId: createdBid._id,
+    //           },
+    //         ],
+    //       },
+    //     ],
+    //     { session }
+    //   );
+    //   requirement = requirement[0];
+    // }
 
     await cartSchema.findOneAndUpdate(
       { userId: sellerId },
@@ -399,7 +425,7 @@ export const createBid = async (req, res) => {
       productId,
       sellerId,
       buyerId: updatedProduct.userId,
-      requirementId: requirement?._id,
+      requirementId: updatedRequirement?._id,
     });
   } catch (err) {
     console.log('CREATE BID ERROR------------->', err);

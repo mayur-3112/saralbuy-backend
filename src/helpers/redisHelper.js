@@ -10,11 +10,7 @@ class RedisHelper {
       throw new Error('KEY AND VALUE IS REQUIRED');
     }
 
-   return  await this.redisClient.set(
-      key,
-      JSON.stringify(value),
-      { EX: ttl }
-    );
+    return await this.redisClient.set(key, JSON.stringify(value), { EX: ttl });
   }
 
   async get(key) {
@@ -26,6 +22,9 @@ class RedisHelper {
     }
 
     return null;
+  }
+  async del(key) {
+    return await this.redisClient.del(key);
   }
 }
 

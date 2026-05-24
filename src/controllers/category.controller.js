@@ -11,7 +11,7 @@ export const GetCategories = async (req, res) => {
       return ApiResponse.successResponse(res, 200, 'categories fetched successfully', isCacheData);
     }
     const categories = await categorySchema.find().lean();
-    await redisHelper.set('categories', categories);
+    await redisHelper.set('categories', categories, 24 * 60 * 60);
     return ApiResponse.successResponse(res, 200, 'categories fetched successfully', categories);
   } catch (error) {
     return ApiResponse.errorResponse(res, 400, error?.response || error, null);

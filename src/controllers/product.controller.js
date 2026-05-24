@@ -415,20 +415,24 @@ export const searchProductsController = async (req, res) => {
 
     const sortByBudget = (docs, direction) =>
       [...docs].sort((a, b) => {
-        const aVal = Number(a.budget) || 0;
-        const bVal = Number(b.budget) || 0;
+        const aVal = Number(a.minimumBudget) || 0;
+        const bVal = Number(b.minimumBudget) || 0;
         return direction === 'low_to_high' ? aVal - bVal : bVal - aVal;
       });
 
-    const buildBudgetExpr = (min, max) => {
-      if (!min && !max) return null;
-      const conds = [];
-      if (min) conds.push({ $gte: [{ $toDouble: '$budget' }, Number(min)] });
-      if (max) conds.push({ $lte: [{ $toDouble: '$budget' }, Number(max)] });
-      return { $and: conds };
+    const buildBudgetFilter = (min, max) => {
+      const minNum = min != null && min !== '' ? Number(min) : null;
+      const maxNum = max != null && max !== '' ? Number(max) : null;
+
+      if (minNum === null && maxNum === null) return null;
+
+      const condition = {};
+      if (minNum !== null && !isNaN(minNum)) condition.$gte = minNum;
+      if (maxNum !== null && !isNaN(maxNum)) condition.$lte = maxNum;
+
+      return Object.keys(condition).length > 0 ? { minimumBudget: condition } : null;
     };
 
-    // ✅ Escape all regex special chars so "-", ".", "(", ")" etc. are safe
     const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     const fetchProducts = async (filter, sortObj) => {
@@ -465,8 +469,8 @@ export const searchProductsController = async (req, res) => {
     const isPriceSort = sort === 'low_to_high' || sort === 'high_to_low';
     const sortObj = isPriceSort ? { createdAt: -1 } : buildSortObj(sort);
 
-    const budgetExpr = buildBudgetExpr(min_budget, max_budget);
-    if (budgetExpr) filter.$expr = budgetExpr;
+    const budgetFilter = buildBudgetFilter(min_budget, max_budget);
+    if (budgetFilter) Object.assign(filter, budgetFilter);
 
     // ════════════════════════════════════════════════════════════════════════
     // BRANCH A — Title search
@@ -480,19 +484,18 @@ export const searchProductsController = async (req, res) => {
         );
       }
 
-      // ✅ Strip punctuation/special chars, filter empty tokens, escape safely
       const words = title
         .trim()
         .split(/\s+/)
-        .map(w => w.replace(/[^a-zA-Z0-9]/g, '')) // remove -, ., etc.
-        .filter(w => w.length > 1) // drop single chars & empty
+        .map(w => w.replace(/[^a-zA-Z0-9]/g, ''))
+        .filter(w => w.length > 1)
         .map(escapeRegex);
 
       if (words.length === 0) {
         return ApiResponse.errorResponse(res, 400, 'Search title contains no valid keywords');
       }
 
-      // Strong: ALL meaningful words must appear (whole-word boundary)
+      // Strong: ALL words as whole-word match
       const strongFilter = {
         ...filter,
         $and: words.map(w => ({
@@ -500,7 +503,7 @@ export const searchProductsController = async (req, res) => {
         })),
       };
 
-      // Medium: ALL words as substrings (no boundary — catches partial matches)
+      // Medium: ALL words as substring match
       const mediumFilter = {
         ...filter,
         $and: words.map(w => ({
@@ -508,7 +511,7 @@ export const searchProductsController = async (req, res) => {
         })),
       };
 
-      // Weak: ANY word matches as substring (broadest fallback)
+      // Weak: ANY word as substring match
       const weakFilter = {
         ...filter,
         $or: words.map(w => ({
@@ -519,13 +522,11 @@ export const searchProductsController = async (req, res) => {
       let products = await fetchProducts(strongFilter, sortObj);
       let total = await productSchema.countDocuments(strongFilter);
 
-      // Fallback 1 → medium
       if (products.length === 0) {
         products = await fetchProducts(mediumFilter, sortObj);
         total = await productSchema.countDocuments(mediumFilter);
       }
 
-      // Fallback 2 → weak
       if (products.length === 0) {
         products = await fetchProducts(weakFilter, sortObj);
         total = await productSchema.countDocuments(weakFilter);

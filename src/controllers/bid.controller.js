@@ -191,6 +191,7 @@ export const updateBidUserDetails = async (req, res) => {
 
 export const createBid = async (req, res) => {
   const session = await mongoose.startSession();
+  console.log('CREATE BID REQ BODY:', req.body);
 
   try {
     session.startTransaction();
@@ -221,11 +222,12 @@ export const createBid = async (req, res) => {
       throw new Error('budgetQuation is required');
     }
 
-    const isProductIsSold = await productSchema.exists({ _id: productId, isSoldProduct: true });
+    const isProductIsSold = await productSchema
+      .exists({ _id: productId, isSoldProduct: true })
+      .session(session);
     if (isProductIsSold?._id)
       return ApiResponse.errorResponse(res, 400, 'This product is already sold');
 
-    // ❌ Duplicate bid check
     const existingBid = await bidSchema.findOne({ sellerId, buyerId, productId }, null, {
       session,
     });
@@ -234,14 +236,13 @@ export const createBid = async (req, res) => {
       throw new Error('You have already placed a bid for this product');
     }
 
-    const isSold = await closeDealSchema.exists(
-      {
+    const isSold = await closeDealSchema
+      .exists({
         productId,
         closedDealStatus: 'completed',
         dealStatus: 'accepted',
-      },
-      { session }
-    );
+      })
+      .session(session);
 
     if (isSold?._id) {
       throw new Error('This product is already sold');
@@ -754,5 +755,18 @@ export const deleteBid = async (req, res) => {
       400,
       err.message || 'Something went wrong while deleting bid'
     );
+  }
+};
+
+export const getBidDetailsBySellerIdAndProductId = async (req, res) => {
+  const { sellerId, productId } = req.params;
+  try {
+    const bidDetails = await bidSchema.findOne({ sellerId, productId }).populate('sellerId').lean();
+    if (!bidDetails) {
+      return ApiResponse.errorResponse(res, 404, 'Bid not found for this seller and product');
+    }
+    return ApiResponse.successResponse(res, 200, 'Bid details fetched successfully', bidDetails);
+  } catch (error) {
+    return ApiResponse.errorResponse(res, 400, error.message || 'Failed to fetch bid details');
   }
 };

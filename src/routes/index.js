@@ -6,7 +6,34 @@ import bidRouter from './bid.route.js';
 import requirementRouter from './requirement.route.js';
 import cartRouter from './cart.route.js';
 import notificationRouter from './notification.route.js';
+import { allowUploadFields, upload } from '../utils/multer.js';
+import { ApiResponse } from '../helpers/ApiReponse.js';
+import uploadFile from '../config/imageKit.config.js';
+import auth from '../middleware/auth.middleware.js';
+upload;
 const router = express.Router();
+
+router.post('/bucket', auth, upload.single('file'), async (req, res) => {
+  try {
+    console.log('file', req.file);
+    if (!req.file) return ApiResponse.errorResponse(res, 400, 'No file uploaded');
+    const document = req.file;
+    let url;
+    if (document) {
+      url = await uploadFile(document);
+    }
+    const type = req.file.mimetype.startsWith('image/') ? 'image' : 'document';
+    return ApiResponse.successResponse(res, 200, 'File uploaded successfully', {
+      url,
+      type,
+      mimeType: req.file.mimetype,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+    });
+  } catch (error) {
+    return ApiResponse.errorResponse(res, 500, 'Error uploading files');
+  }
+});
 
 // const adminRoutes =[
 //     {path:"/admin/auth",router:authRoute},
@@ -16,7 +43,6 @@ const router = express.Router();
 //     {path:"/admin/requirement",router:adminRequirementRouter},
 // ]
 
-// user routes
 const routes = [
   { path: '/category', router: categoryRouter },
   { path: '/product', router: productRouter },

@@ -61,16 +61,15 @@ export const addProduct = async (req, res) => {
     });
 
     // create a requirement
-   if(body.draft === 'false'){
-     await requirementSchema.create([
-      {
-        productId: product._id,
-        buyerId: req.user._id,
-        sellers: [],
-      },
-    ]);
-
-   }
+    if (body.draft === 'false') {
+      await requirementSchema.create([
+        {
+          productId: product._id,
+          buyerId: req.user._id,
+          sellers: [],
+        },
+      ]);
+    }
     return ApiResponse.successResponse(res, 201, 'Product created successfully', product);
   } catch (error) {
     console.log(error);

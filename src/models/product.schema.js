@@ -12,9 +12,9 @@ const productSchema = new mongoose.Schema(
     quantity: {
       type: String,
     },
-    quantityUnit:{
-      type:String,
-      default:null
+    quantityUnit: {
+      type: String,
+      default: null,
     },
     minimumBudget: { type: Number },
     description: { type: String },
@@ -72,7 +72,6 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-
   },
   {
     timestamps: true,

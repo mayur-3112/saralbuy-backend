@@ -12,6 +12,6 @@ const result = dotenv.config({
   path: path.resolve(process.cwd(), envFile),
 });
 
-if (result.error) {
-  process.exit(1);
-}
+// if (result.error) {
+//   process.exit(1);
+// }

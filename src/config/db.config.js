@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-
 let connection = null;
 export default function mongoCtx() {
   if (connection) {

@@ -758,7 +758,6 @@ export const deleteBid = async (req, res) => {
   }
 };
 
-
 export const getBidDetailsBySellerIdAndProductId = async (req, res) => {
   const { sellerId, productId } = req.params;
   try {

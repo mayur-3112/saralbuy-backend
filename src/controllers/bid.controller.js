@@ -391,7 +391,7 @@ export const createBid = async (req, res) => {
         senderId: sellerId,
         productId,
         type: 'new_bid',
-        title: 'New Quote received',
+        title: 'New quote received',
         description: `${sellerName} placed a new quote on your product "${productTitle}".`,
         roomId: null,
         metadata: {

@@ -51,8 +51,6 @@ const routes = [
   { path: '/requirement', router: requirementRouter },
   { path: '/cart', router: cartRouter },
   { path: '/notification', router: notificationRouter },
-  // {path:"/banner",router:bannerRouter},
-  // ...adminRoutes
 ];
 
 routes.forEach(route => {

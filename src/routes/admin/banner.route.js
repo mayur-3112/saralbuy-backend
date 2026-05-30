@@ -4,6 +4,6 @@ import auth from '../../middleware/auth.middleware.js';
 import { upload } from '../../utils/multer.js';
 const router = express.Router();
 
-router.route('/').all(auth).post(upload.single('file'), uploadBanner).get(getBanners);
+router.route('/').all(auth).post(upload.single('image'), uploadBanner).get(getBanners);
 
 export default router;

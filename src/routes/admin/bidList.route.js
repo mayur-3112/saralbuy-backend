@@ -1,10 +1,10 @@
 import express from 'express';
 import { adminGetBidListing, getBidById } from '../../controllers/admin/bidList.controller.js';
-import auth from '../../middleware/auth.middleware.js';
+import adminAuth from '../../middleware/adminAuth.middleware.js';
 
 const router = express.Router();
 
-router.get('/bid-listing', auth, adminGetBidListing);
-router.get('/get-bid-by-id/:id', auth, getBidById);
+router.get('/bid-listing', adminAuth, adminGetBidListing);
+router.get('/get-bid-by-id/:id', adminAuth, getBidById);
 
 export default router;

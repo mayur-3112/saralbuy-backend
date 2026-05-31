@@ -8,15 +8,15 @@ import {
   getUser,
   getUserById,
 } from '../../controllers/admin/auth.controller.js';
-import auth from '../../middleware/auth.middleware.js';
+import adminAuth from '../../middleware/adminAuth.middleware.js';
 
 const router = express.Router();
 
 router.post('/login', login);
 router.post('/signup', register);
-router.get('/logout', auth, logout);
-router.get('/profile', auth, adminProfile);
-router.put('/update-user/:id', auth, updateUserById);
-router.get('/get-users', auth, getUser);
-router.get('/get-user/:id', auth, getUserById);
+router.get('/logout', adminAuth, logout);
+router.get('/profile', adminAuth, adminProfile);
+router.put('/update-user/:id', adminAuth, updateUserById);
+router.get('/get-users', adminAuth, getUser);
+router.get('/get-user/:id', adminAuth, getUserById);
 export default router;

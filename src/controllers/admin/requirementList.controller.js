@@ -20,76 +20,60 @@ export const adminRequirementListing = async (req, res) => {
     ];
   }
 
-  const commonPipeline = [
-    {
-      $lookup: {
-        from: 'products',
-        localField: 'productId',
-        foreignField: '_id',
-        as: 'productId',
+  try {
+    const pipeline = [
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'productId',
+        },
       },
-    },
-    { $unwind: '$productId' },
-
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'buyerId',
-        foreignField: '_id',
-        as: 'buyerId',
+     { $unwind: { path: '$productId', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'buyerId',
+          foreignField: '_id',
+          as: 'buyerId',
+        },
       },
-    },
-    { $unwind: '$buyerId' },
-    {
-      $lookup: {
-        from: 'users',
-        let: {
-          sellersIds: {
-            $map: {
-              input: '$sellers',
-              as: 's',
-              in: {
-                $toObjectId: '$$s.sellerId',
+   { $unwind: { path: '$buyerId', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'users',
+          let: {
+            sellersIds: {
+              $map: {
+                input: '$sellers',
+                as: 's',
+                in: { $toObjectId: '$$s.sellerId' },
               },
             },
           },
+          pipeline: [{ $match: { $expr: { $in: ['$_id', '$$sellersIds'] } } }],
+          as: 'sellerUsers',
         },
-        pipeline: [{ $match: { $expr: { $in: ['$_id', '$$sellersIds'] } } }],
-        as: 'sellerUsers',
       },
-    },
+      { $addFields: { sellers: '$sellerUsers' } },
+      { $project: { sellerUsers: 0 } },
 
-    {
-      $addFields: {
-        sellers: '$sellerUsers',
-      },
-    },
-
-    { $project: { sellerUsers: 0 } },
-  ];
-
-  try {
-    const listingPipeline = [
-      ...commonPipeline,
       { $addFields: { sellerCount: { $size: '$sellers' } } },
       { $match: { sellerCount: { $gt: 0 }, ...matchQuery } },
       { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: limit },
+      {
+        $facet: {
+          requirements: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: 'total' }],
+        },
+      },
     ];
 
-    const requirements = await requirementSchema.aggregate(listingPipeline);
+    const [result] = await requirementSchema.aggregate(pipeline);
 
-    const countPipeline = [
-      ...commonPipeline,
-      { $addFields: { sellerCount: { $size: '$sellers' } } },
-      { $match: { sellerCount: { $gt: 0 }, ...matchQuery } },
-      { $count: 'total' },
-    ];
-
-    const countResult = await requirementSchema.aggregate(countPipeline);
-    console.log(countResult, 3);
-    const totalRequirements = countPipeline.length ? countResult[0]?.total : 0;
+    const requirements = result?.requirements || [];
+    const totalRequirements = result?.totalCount?.[0]?.total || 0;
 
     ApiResponse.successResponse(res, 200, 'Requirements fetched successfully!', {
       requirements,

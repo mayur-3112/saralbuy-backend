@@ -29,12 +29,13 @@ export const getBanners = async (req, res) => {
     const banners = await bannerSchema.find().skip(skip).limit(limit);
     const totalBanners = await bannerSchema.countDocuments();
     const totalPages = Math.ceil(totalBanners / limit);
-    ApiResponse.successResponse(res, 200, 'users fetched', {
+    let response ={
       banners,
       page,
       totalPages,
       totalBanners,
-    });
+    }
+    ApiResponse.successResponse(res, 200, 'users fetched',response );
   } catch (error) {
     ApiResponse.errorResponse(res, 400, error.message);
   }

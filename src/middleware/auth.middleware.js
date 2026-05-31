@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { ApiResponse } from '../helpers/ApiReponse.js';
 
 const auth = (req, res, next) => {
-  const token = req.cookies?.authToken || req.cookies?.adminToken;
+  const token = req.cookies?.authToken 
 
   if (!token) return ApiResponse.errorResponse(res, 401, 'Token not found');
 

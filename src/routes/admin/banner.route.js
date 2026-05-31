@@ -6,17 +6,16 @@ import {
   updateBanner
 } from '../../controllers/admin/banner.controller.js';
 
-import auth from '../../middleware/auth.middleware.js';
+import adminAuth from '../../middleware/adminAuth.middleware.js';
 import { upload } from '../../utils/multer.js';
 
 const router = express.Router();
 
 router.route('/')
-  .all(auth)
-  .post(upload.single('image'), uploadBanner)
+  .post(adminAuth,upload.single('image'), uploadBanner)
   .get(getBanners);
 
-router.put('/:bannerId', auth,upload.single('image'), updateBanner);
-router.get('/get-banner/:bannerId', auth, BannerDetsById);
+router.put('/:bannerId', adminAuth,upload.single('image'), updateBanner);
+router.get('/get-banner/:bannerId', adminAuth, BannerDetsById);
 
 export default router;

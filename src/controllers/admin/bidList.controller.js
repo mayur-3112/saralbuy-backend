@@ -39,7 +39,6 @@ export const adminGetBidListing = async (req, res) => {
         },
       },
       { $unwind: '$sellerId' },
-
       {
         $lookup: {
           from: 'users',
@@ -49,42 +48,29 @@ export const adminGetBidListing = async (req, res) => {
         },
       },
       { $unwind: '$buyerId' },
-
-      {
-        $match: matchQuery,
-      },
-
+      { $match: matchQuery },
       {
         $group: {
           _id: '$product._id',
           productDetails: { $first: '$product' },
-          productOnBids: { $push: '$$ROOT' }, // $ROOT will include all fields from the document
+          productOnBids: { $push: '$$ROOT' },
           totalBidsPerProduct: { $sum: 1 },
         },
       },
       { $sort: { _id: -1 } },
-      { $skip: skip },
-      { $limit: limit },
-    ];
-
-    const bids = await bidSchema.aggregate(pipeline);
-
-    const totalPipeline = [
       {
-        $lookup: {
-          from: 'products',
-          localField: 'productId',
-          foreignField: '_id',
-          as: 'productId',
+        $facet: {
+          bids: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: 'total' }],
         },
       },
-      { $unwind: '$productId' },
-      { $match: matchQuery },
-      { $count: 'total' },
     ];
 
-    const totalResult = await bidSchema.aggregate(totalPipeline);
-    const totalBids = totalResult.length ? totalResult[0].total : 0;
+    const [result] = await bidSchema.aggregate(pipeline);
+
+    const bids = result?.bids || [];
+    const totalBids = result?.totalCount?.[0]?.total || 0;
+
     return ApiResponse.successResponse(res, 200, 'Bid listing fetched successfully', {
       bids,
       page,

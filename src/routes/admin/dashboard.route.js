@@ -1,5 +1,5 @@
 import express from 'express';
-import auth from '../../middleware/auth.middleware.js';
+import adminAuth from '../../middleware/adminAuth.middleware.js';
 import {
   getCategoriesNames,
   dashboardAnaltics,
@@ -11,7 +11,7 @@ import {
 } from '../../controllers/admin/dashboard.controller.js';
 import { upload } from '../../utils/multer.js';
 const router = express.Router();
-router.use(auth);
+router.use(adminAuth);
 router.get('/get-categorie-names', getCategoriesNames);
 router.get('/analtics', dashboardAnaltics);
 router.get('/populate-products-by-id', populateProductsById);

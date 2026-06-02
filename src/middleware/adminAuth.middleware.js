@@ -13,14 +13,6 @@ const adminAuth = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-
-    // if (decoded.role !== 'admin') {
-    //   return res.status(403).json({
-    //     success: false,
-    //     message: 'Admin access required',
-    //   });
-    // }
-
     req.user = {
       userId: decoded._id,
       ...decoded

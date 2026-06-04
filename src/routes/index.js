@@ -13,6 +13,11 @@ import auth from '../middleware/auth.middleware.js';
 upload;
 const router = express.Router();
 
+
+router.get('/', (_, res) => {
+  res.end('User Route...');
+});
+
 router.post('/bucket', auth, upload.single('file'), async (req, res) => {
   try {
     console.log('file', req.file);

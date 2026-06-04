@@ -15,7 +15,7 @@ const adminAuth = (req, res, next) => {
 
     req.user = {
       userId: decoded._id,
-      ...decoded
+      ...decoded,
     };
     next();
   } catch {

@@ -30,7 +30,7 @@ export const adminRequirementListing = async (req, res) => {
           as: 'productId',
         },
       },
-     { $unwind: { path: '$productId', preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: '$productId', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'users',
@@ -39,7 +39,7 @@ export const adminRequirementListing = async (req, res) => {
           as: 'buyerId',
         },
       },
-   { $unwind: { path: '$buyerId', preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: '$buyerId', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'users',
@@ -120,6 +120,39 @@ export const requirementListingById = async (req, res) => {
       { $unwind: '$productId' },
       { $lookup: { from: 'users', localField: 'buyerId', foreignField: '_id', as: 'buyerId' } },
       { $unwind: '$buyerId' },
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'productId.categoryId',
+          foreignField: '_id',
+          as: 'categoryData',
+        },
+      },
+      {
+        $addFields: {
+          'productId.categoryId': '$categoryData',
+        },
+      },
+      { $unwind: '$productId.categoryId' },
+      {
+        $addFields: {
+          'productId.subCategoryId': {
+            $filter: {
+              input: '$productId.categoryId.subCategories',
+              as: 'subCat',
+              cond: {
+                $eq: [{ $toObjectId: '$$subCat._id' }, { $toObjectId: '$productId.subCategoryId' }],
+              },
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          'productId.subCategoryId': { $arrayElemAt: ['$productId.subCategoryId', 0] },
+        },
+      },
+
       {
         $lookup: {
           from: 'users',

@@ -37,9 +37,12 @@ export const dashboardAnaltics = async (req, res) => {
     const inactiveUsers = await userSchema.find({ status: 'inactive' }).lean().countDocuments();
     const user = await userSchema.find().lean().countDocuments();
     const products = await productSchema.find().lean().countDocuments();
-    const requirements = await requirementSchema.find({
-      'sellers.0':{$exists:true}
-    }).lean().countDocuments();
+    const requirements = await requirementSchema
+      .find({
+        'sellers.0': { $exists: true },
+      })
+      .lean()
+      .countDocuments();
     const recentProductCreated = await productSchema
       .find({ draft: false })
       .sort({ createdAt: -1 })

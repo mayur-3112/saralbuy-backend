@@ -116,7 +116,6 @@ export const getBidById = async (req, res) => {
         },
       },
       { $unwind: '$product' },
-
       {
         $lookup: {
           from: 'users',
@@ -145,19 +144,63 @@ export const getBidById = async (req, res) => {
           totalBidsPerProduct: { $sum: 1 },
         },
       },
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'productDetails.categoryId',
+          foreignField: '_id',
+          as: 'categoryData',
+        },
+      },
+      {
+        $unwind: {
+          path: '$categoryData',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          'productDetails.categoryId': '$categoryData',
+        },
+      },
 
-      { $sort: { _id: -1 } },
-      { $skip: skip },
-      { $limit: limit },
+      {
+        $addFields: {
+          'productDetails.subCategoryId': {
+            $filter: {
+              input: '$productDetails.categoryId.subCategories',
+              as: 'category',
+              cond: {
+                $eq: [{ $toObjectId: '$$category._id' }, { $toObjectId: '$categoryId._id' }],
+              },
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          'productDetails.subCategoryId': {
+            $arrayElemAt: ['$productDetails.categoryId.subCategories', 0],
+          },
+        },
+      },
+      {
+        $unset: 'productDetails.categoryId.subCategories',
+      },
+      {
+        $facet: {
+          bids: [{ $sort: { _id: -1 } }, { $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: 'count' }],
+        },
+      },
     ];
 
     const result = await bidSchema.aggregate(pipeline);
-    const totalCount = await bidSchema.countDocuments({
-      productId: new mongoose.Types.ObjectId(id),
-    });
+    const bids = result[0]?.bids || [];
+    const totalCount = result[0]?.totalCount?.[0]?.count || 0;
 
     return ApiResponse.successResponse(res, 200, 'Bid listing fetched successfully', {
-      bids: result.length ? result[0] : null,
+      bids: bids.length ? bids[0] : null,
       page,
       totalPages: Math.ceil(totalCount / limit),
       totalBids: totalCount,

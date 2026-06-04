@@ -174,7 +174,7 @@ export const getProfile = async (req, res) => {
     res.status(200).json(user);
   } catch (err) {
     console.log(err);
-     await redisHelper.del(`user_${req.user._id}`)
+    await redisHelper.del(`user_${req.user._id}`);
     res.status(400).json({ message: err.message });
   }
 };

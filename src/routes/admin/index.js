@@ -8,6 +8,7 @@ import adminAuth from '../../middleware/adminAuth.middleware.js';
 import { ApiResponse } from '../../helpers/ApiReponse.js';
 import uploadFile from '../../config/imageKit.config.js';
 import { upload } from '../../utils/multer.js';
+import categoriesRoute from './categories.route.js';
 const router = express.Router();
 
 router.get('/', (_, res) => {
@@ -42,6 +43,7 @@ const routes = [
   { path: '/dashboard', router: dashboardRoute },
   { path: '/bid', router: bidListRoute },
   { path: '/requirement', router: requirementListRoute },
+  { path: '/categories', router: categoriesRoute },
 ];
 routes.forEach(route => {
   router.use(route.path, route.router);

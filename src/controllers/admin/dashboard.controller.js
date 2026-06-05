@@ -18,7 +18,7 @@ export const getCategoriesNames = async (req, res) => {
       .sort({
         categoryName: 1,
       })
-      .select('categoryName _id');
+      .select('categoryName subCategories _id');
     ApiResponse.successResponse(res, 200, 'categories fetched successfully', categories);
   } catch (error) {
     ApiResponse.errorResponse(res, 400, error.message);

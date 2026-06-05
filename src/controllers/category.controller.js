@@ -6,12 +6,12 @@ import redisHelper from '../helpers/redisHelper.js';
 export const GetCategories = async (req, res) => {
   try {
     const isCacheData = await redisHelper.get('categories');
-    if (isCacheData) {
-      console.log('cache categories...');
-      return ApiResponse.successResponse(res, 200, 'categories fetched successfully', isCacheData);
-    }
+    // if (isCacheData) {
+    //   console.log('cache categories...');
+    //   return ApiResponse.successResponse(res, 200, 'categories fetched successfully', isCacheData);
+    // }
     const categories = await categorySchema.find().lean();
-    await redisHelper.set('categories', categories, 24 * 60 * 60);
+    // await redisHelper.set('categories', categories, 24 * 60 * 60);
     return ApiResponse.successResponse(res, 200, 'categories fetched successfully', categories);
   } catch (error) {
     return ApiResponse.errorResponse(res, 400, error?.response || error, null);

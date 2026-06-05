@@ -13,7 +13,6 @@ import auth from '../middleware/auth.middleware.js';
 upload;
 const router = express.Router();
 
-
 router.get('/', (_, res) => {
   res.end('User Route...');
 });

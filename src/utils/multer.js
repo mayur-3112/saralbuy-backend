@@ -5,7 +5,7 @@ import fs from 'fs';
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-  const allowedExt = ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.doc', '.docx', '.csv','.webp'];
+  const allowedExt = ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.doc', '.docx', '.csv', '.webp'];
   const ext = path.extname(file.originalname).toLowerCase();
   if (ext) {
     cb(null, true);

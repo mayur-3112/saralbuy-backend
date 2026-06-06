@@ -27,7 +27,7 @@ const productSchema = new mongoose.Schema(
 
     color: { type: String },
     selectCategory: { type: String },
-    brand: { type: String },
+    brand: { type: String, lowercase:true },
     additionalDeliveryAndPackage: { type: String },
     fuelType: { type: String },
     model: { type: String },

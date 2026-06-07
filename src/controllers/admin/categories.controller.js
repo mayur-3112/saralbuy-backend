@@ -71,3 +71,23 @@ export const createSubcategory = async (req, res) => {
     return ApiResponse.errorResponse(res, 500, 'something went wrong', error);
   }
 };
+
+export const deleteSubCategory = async (req, res) => {
+  const { categoryId, subCategoryId } = req.body;
+  console.log(req.body);
+  try {
+    const findCategory = await categorySchema.findOne({ _id: categoryId }).select('subCategories');
+    const subCategoryIndex = findCategory.subCategories.findIndex(
+      item => item._id.toString() === subCategoryId
+    );
+    if (subCategoryIndex === -1) {
+      return ApiResponse.errorResponse(res, 400, 'category not found');
+    }
+    findCategory.subCategories.splice(subCategoryIndex, 1);
+    await findCategory.save();
+    return ApiResponse.successResponse(res, 200, 'category deleted', findCategory);
+  } catch (error) {
+    console.log(error);
+    return ApiResponse.errorResponse(res, 500, 'something went wrong', error);
+  }
+};

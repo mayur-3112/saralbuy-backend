@@ -4,6 +4,7 @@ import {
   createSubcategory,
   getCategoryNameWise,
   updateCategory,
+  deleteSubCategory,
 } from '../../controllers/admin/categories.controller.js';
 const router = express.Router();
 
@@ -12,6 +13,7 @@ router
   .all(adminAuth)
   .get(getCategoryNameWise)
   .put(updateCategory)
-  .post(createSubcategory);
+  .post(createSubcategory)
+  .delete(deleteSubCategory);
 
 export default router;

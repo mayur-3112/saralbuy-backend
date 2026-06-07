@@ -14,16 +14,16 @@ export const getCategoryNameWise = async (req, res) => {
 
 export const updateCategory = async (req, res) => {
   try {
-    const { categoryId, subCategory,categoryName } = req.body;
-    console.log(req.body)
+    const { categoryId, subCategory, categoryName } = req.body;
+    console.log(req.body);
 
-    if(categoryId && categoryName){
-        const findCategory = await categorySchema.findOne({ _id: categoryId })
-        if(findCategory){
-            findCategory.categoryName = categoryName;
-            await findCategory.save();
-            return ApiResponse.successResponse(res, 200, 'category updated', findCategory);
-        }
+    if (categoryId && categoryName) {
+      const findCategory = await categorySchema.findOne({ _id: categoryId });
+      if (findCategory) {
+        findCategory.categoryName = categoryName;
+        await findCategory.save();
+        return ApiResponse.successResponse(res, 200, 'category updated', findCategory);
+      }
     }
 
     const findCategory = await categorySchema.findOne({ _id: categoryId }).select('subCategories');
@@ -46,4 +46,3 @@ export const updateCategory = async (req, res) => {
     return ApiResponse.errorResponse(res, 500, 'something went wrong', error);
   }
 };
-

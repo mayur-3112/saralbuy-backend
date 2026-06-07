@@ -7,7 +7,13 @@ let io;
 export const initSocket = server => {
   io = new Server(server, {
     cors: {
-      origin: [process.env.CLIENT_URL, 'http://localhost:5174'],
+      origin: [
+        process.env.CLIENT_URL,
+        process.env.ADMIN_URL,
+        'http://localhost:5174',
+        'https://saralbuy.com',
+        'https://www.saralbuy.com',
+      ],
       credentials: true,
       methods: ['GET', 'POST', 'DELETE', 'PUT'],
     },

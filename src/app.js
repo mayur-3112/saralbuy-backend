@@ -14,7 +14,13 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(
   cors({
-    origin: [process.env.CLIENT_URL, process.env.ADMIN_URL, 'http://localhost:5174'],
+   origin: [
+  process.env.CLIENT_URL,
+  process.env.ADMIN_URL,
+  'http://localhost:5174',
+  'https://saralbuy.com',
+  'https://www.saralbuy.com'
+],
     credentials: true,
   })
 );

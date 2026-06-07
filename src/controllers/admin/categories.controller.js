@@ -46,3 +46,28 @@ export const updateCategory = async (req, res) => {
     return ApiResponse.errorResponse(res, 500, 'something went wrong', error);
   }
 };
+
+export const createSubcategory = async (req, res) => {
+  const { categoryId, categoryName, brands } = req.body;
+  console.log(req.body);
+  if (!categoryId || !categoryName || !brands) {
+    return ApiResponse.errorResponse(res, 400, 'please provide all required fields');
+  }
+  try {
+    const findCategory = await categorySchema.findOne({ _id: categoryId }).select('subCategories');
+    const subCategoryIndex = findCategory.subCategories.findIndex(
+      item => item.name === categoryName
+    );
+    if (subCategoryIndex !== -1) {
+      return ApiResponse.errorResponse(res, 400, 'category already exists');
+    }
+
+    findCategory.subCategories.push({ name: categoryName, brands });
+
+    await findCategory.save();
+    return ApiResponse.successResponse(res, 200, 'category created', findCategory);
+  } catch (error) {
+    console.log(error);
+    return ApiResponse.errorResponse(res, 500, 'something went wrong', error);
+  }
+};

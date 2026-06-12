@@ -4,8 +4,13 @@ export default function mongoCtx() {
   if (connection) {
     return connection;
   }
+  let dbUri = process.env.DB_CTX || process.env.MONGODB_URI || process.env.DATABASE_URL;
+  if (dbUri) {
+    dbUri = dbUri.trim().replace(/^["']|["']$/g, '');
+  }
+
   connection = mongoose
-    .connect(process.env.DB_CTX || process.env.MONGODB_URI || process.env.DATABASE_URL, {
+    .connect(dbUri, {
       dbName: 'saralbuy',
       maxPoolSize: 10,
       family: 4,

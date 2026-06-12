@@ -1,13 +1,21 @@
 import ImageKit from '@imagekit/nodejs';
-const client = new ImageKit({
-  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
-  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
-  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
-});
+
+let client = null;
+const getClient = () => {
+  if (!client) {
+    client = new ImageKit({
+      publicKey: process.env.IMAGEKIT_PUBLIC_KEY || 'dummy_public_key',
+      privateKey: process.env.IMAGEKIT_PRIVATE_KEY || 'dummy_private_key',
+      urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/dummy_id/',
+    });
+  }
+  return client;
+};
 
 const uploadFile = async file => {
   try {
-    const result = await client.files.upload({
+    const activeClient = getClient();
+    const result = await activeClient.files.upload({
       file: file.buffer.toString('base64'),
       fileName: file.originalname,
       folder: 'images',

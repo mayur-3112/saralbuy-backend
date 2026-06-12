@@ -5,7 +5,7 @@ export default function mongoCtx() {
     return connection;
   }
   connection = mongoose
-    .connect(process.env.DB_CTX, {
+    .connect(process.env.DB_CTX || process.env.MONGODB_URI || process.env.DATABASE_URL, {
       dbName: 'saralbuy',
       maxPoolSize: 10,
       family: 4,

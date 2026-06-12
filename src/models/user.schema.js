@@ -81,8 +81,8 @@ const userSchema = new mongoose.Schema(
 
 userSchema.index({ firstName: 1, lastName: 1, email: 1 });
 userSchema.methods.generateAuthToken = function () {
-  return jwt.sign({ _id: this._id, email: this.email }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
+  return jwt.sign({ _id: this._id, email: this.email }, process.env.JWT_SECRET || 'saralbuy-default-secret-key-1234567890', {
+    expiresIn: process.env.JWT_EXPIRES_IN || '30d',
   });
 };
 userSchema.pre('save', async function () {

@@ -23,9 +23,19 @@ app.use(
         'https://saralbuy.com',
         'https://www.saralbuy.com',
       ];
-      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.loca.lt') || origin.endsWith('.ngrok-free.app') || origin.endsWith('.serveousercontent.com')) {
+      const normalizedOrigin = origin ? origin.replace(/\/$/, '') : '';
+      if (
+        !origin ||
+        allowedOrigins.some(o => o && o.replace(/\/$/, '') === normalizedOrigin) ||
+        normalizedOrigin.endsWith('.loca.lt') ||
+        normalizedOrigin.endsWith('.ngrok-free.app') ||
+        normalizedOrigin.endsWith('.serveousercontent.com') ||
+        normalizedOrigin.endsWith('.netlify.app') ||
+        normalizedOrigin.includes('netlify.app')
+      ) {
         callback(null, true);
       } else {
+        console.error('CORS blocked origin:', origin);
         callback(new Error('Not allowed by CORS'));
       }
     },

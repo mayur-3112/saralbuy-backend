@@ -13,6 +13,7 @@ import {
   getDraftProductById,
   updateDraftStatus,
   saveAsDraft,
+  getLiveExchangeStats,
 } from '../controllers/product.controller.js';
 const router = express.Router();
 
@@ -27,4 +28,5 @@ router.get('/get-draft-product/:productId', auth, getDraftProductById);
 router.delete('/delete-draft-product/:productId', auth, deleteDraftProduct);
 router.patch('/updatedraft', auth, allowUploadFields(), updateDraftStatus);
 router.put('/save_as_draft', auth, allowUploadFields(), saveAsDraft);
+router.get('/live-stats', getLiveExchangeStats);
 export default router;

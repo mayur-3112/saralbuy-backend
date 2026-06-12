@@ -7,10 +7,10 @@ const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
   const allowedExt = ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.doc', '.docx', '.csv', '.webp'];
   const ext = path.extname(file.originalname).toLowerCase();
-  if (ext) {
+  if (allowedExt.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type'), false);
+    cb(new Error(`Invalid file type. Allowed types: ${allowedExt.join(', ')}`), false);
   }
 };
 

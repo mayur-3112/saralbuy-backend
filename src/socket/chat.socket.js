@@ -426,11 +426,11 @@ const chatSocket = (io, socket) => {
       socket.emit(SOCKET_EVENTS.DEAL_RATING, { success: true });
       if (!updatedDeal) return;
       await createAndEmitNotification({
-        recipientId: updatedDeal.buyerId,
-        senderId: updatedDeal.sellerId,
+        recipientId: updatedDeal.sellerId,
+        senderId: updatedDeal.buyerId,
         type: 'chat_rating',
         title: 'Rating received',
-        description: `The seller rated your deal ${rating} star${rating > 1 ? 's' : ''}.`,
+        description: `A buyer rated your deal ${rating} star${rating > 1 ? 's' : ''}.`,
         productId: updatedDeal.productId,
         dealId: updatedDeal._id,
         roomId: updatedDeal.roomId,

@@ -16,7 +16,23 @@ process.on('uncaughtException', async err => {
 
 const startServer = async () => {
   try {
-    await Promise.all([mongoCtx(), redisClient.connect()]);
+    // 1. Connect to MongoDB (Required)
+    await mongoCtx();
+
+    // 2. Connect to Redis (Optional)
+    if (process.env.REDIS_URL) {
+      try {
+        await redisClient.connect();
+      } catch (redisErr) {
+        console.warn(
+          '⚠️ Warning: Redis connection failed. Running without caching fallback.',
+          redisErr.message
+        );
+      }
+    } else {
+      console.warn('⚠️ Warning: REDIS_URL not configured. Running without Redis caching.');
+    }
+
     server = http.createServer(app);
     initSocket(server);
     server.listen(PORT, () => {

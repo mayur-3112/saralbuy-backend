@@ -14,13 +14,21 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(
   cors({
-    origin: [
-      process.env.CLIENT_URL,
-      process.env.ADMIN_URL,
-      'http://localhost:5174',
-      'https://saralbuy.com',
-      'https://www.saralbuy.com',
-    ],
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        process.env.CLIENT_URL,
+        process.env.ADMIN_URL,
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'https://saralbuy.com',
+        'https://www.saralbuy.com',
+      ];
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.loca.lt') || origin.endsWith('.ngrok-free.app') || origin.endsWith('.serveousercontent.com')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );

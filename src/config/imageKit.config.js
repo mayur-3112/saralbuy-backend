@@ -6,12 +6,17 @@ const client = new ImageKit({
 });
 
 const uploadFile = async file => {
-  const result = await client.files.upload({
-    file: file.buffer.toString('base64'),
-    fileName: file.originalname,
-    folder: 'images',
-  });
-  return result.url;
+  try {
+    const result = await client.files.upload({
+      file: file.buffer.toString('base64'),
+      fileName: file.originalname,
+      folder: 'images',
+    });
+    return result.url;
+  } catch (err) {
+    console.error('ImageKit upload failed, falling back to null URL:', err.message);
+    return null;
+  }
 };
 
 export default uploadFile;

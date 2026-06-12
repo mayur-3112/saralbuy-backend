@@ -14,7 +14,7 @@ router.post('/send-otp', otpController);
 router.post('/verify-otp', verifyController);
 router.get('/logout', auth, userController.logout);
 router.get('/profile', auth, userController.getProfile);
-router.get('/user-profile', userController.getUserProfile);
+router.get('/user-profile', auth, userController.getUserProfile);
 router.post('/update-profile', auth, allowUploadFields(), userController.updateProfile);
 
 export default router;

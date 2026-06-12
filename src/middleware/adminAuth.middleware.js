@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
+import userSchema from '../models/user.schema.js';
 
-const adminAuth = (req, res, next) => {
+const adminAuth = async (req, res, next) => {
   const token = req.cookies?.adminToken;
 
   if (!token) {
@@ -12,6 +13,14 @@ const adminAuth = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await userSchema.findById(decoded._id).select('role');
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Admin role required',
+      });
+    }
 
     req.user = {
       userId: decoded._id,

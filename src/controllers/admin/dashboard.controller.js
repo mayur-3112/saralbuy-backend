@@ -7,6 +7,8 @@ import mongoose from 'mongoose';
 import requirementSchema from '../../models/requirement.schema.js';
 import redisHelper from '../../helpers/redisHelper.js';
 import uploadFile from '../../config/imageKit.config.js';
+import bidSchema from '../../models/bid.schema.js';
+import closeDealSchema from '../../models/closeDeal.schema.js';
 export const getCategoriesNames = async (req, res) => {
   try {
     const categories = await categorySchema
@@ -43,6 +45,9 @@ export const dashboardAnaltics = async (req, res) => {
       })
       .lean()
       .countDocuments();
+    const bids = await bidSchema.find().lean().countDocuments();
+    const closedDeals = await closeDealSchema.find({ closedDealStatus: 'completed' }).lean().countDocuments();
+    
     const recentProductCreated = await productSchema
       .find({ draft: false })
       .sort({ createdAt: -1 })
@@ -59,6 +64,8 @@ export const dashboardAnaltics = async (req, res) => {
       },
       products,
       requirements,
+      bids,
+      closedDeals,
       recentProductCreated,
     };
     await redisHelper.set(key, JSON.stringify(response), 3600);

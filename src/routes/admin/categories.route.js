@@ -5,6 +5,7 @@ import {
   getCategoryNameWise,
   updateCategory,
   deleteSubCategory,
+  createParentCategory,
 } from '../../controllers/admin/categories.controller.js';
 const router = express.Router();
 
@@ -16,4 +17,10 @@ router
   .post(createSubcategory)
   .delete(deleteSubCategory);
 
+router
+  .route('/parent')
+  .all(adminAuth)
+  .post(createParentCategory);
+
 export default router;
+

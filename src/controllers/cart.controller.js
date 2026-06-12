@@ -140,6 +140,12 @@ export const removeCart = async (req, res) => {
       return ApiResponse.errorResponse(res, 404, 'Cart not found');
     }
 
+    // Verify ownership
+    const loggedInUserId = req.user?.userId || req.user?._id;
+    if (!loggedInUserId || cart.userId.toString() !== loggedInUserId.toString()) {
+      return ApiResponse.errorResponse(res, 403, 'Not authorized to modify this cart');
+    }
+
     cart.cartItems = cart.cartItems.filter(
       item => item.productIds[0].toString() !== productId.toString()
     );

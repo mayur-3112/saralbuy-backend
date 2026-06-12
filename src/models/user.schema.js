@@ -1,6 +1,33 @@
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+
+const ALGORITHM = 'aes-256-cbc';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6'; // 32 characters
+const IV_LENGTH = 16;
+
+function encrypt(text) {
+  if (!text) return text;
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY), iv);
+  let encrypted = cipher.update(text);
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  return iv.toString('hex') + ':' + encrypted.toString('hex');
+}
+
+function decrypt(text) {
+  if (!text) return text;
+  const textParts = text.split(':');
+  if (textParts.length < 2) return text; // fallback for unencrypted old records
+  const iv = Buffer.from(textParts.shift(), 'hex');
+  const encryptedText = Buffer.from(textParts.join(':'), 'hex');
+  const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY), iv);
+  let decrypted = decipher.update(encryptedText);
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+  return decrypted.toString();
+}
+
 // const addressSchema = new mongoose.Schema({
 //   addressLine: { type: String, },
 //   city:        { type: String, },
@@ -17,7 +44,11 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, required: true },
     password: { type: String },
     address: { type: String, default: null, trim: true },
-    aadhaarNumber: { type: String },
+    aadhaarNumber: { 
+      type: String, 
+      get: decrypt, 
+      set: encrypt 
+    },
     aadhaarImage: { type: String }, // file path or URL
     isAadhaarVerified: { type: Boolean, default: false },
     profileImage: { type: String, default: null },
@@ -41,7 +72,11 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    toJSON: { getters: true },
+    toObject: { getters: true }
+  }
 );
 
 userSchema.index({ firstName: 1, lastName: 1, email: 1 });

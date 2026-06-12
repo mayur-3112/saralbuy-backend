@@ -16,9 +16,7 @@ export const login = async (req, res) => {
       ApiResponse.errorResponse(res, 404, 'User not found');
       return;
     }
-    const comparePassword =
-      (await user.comparePassword(password.toString())) ||
-      password === process.env.DEFAULT_ADMIN_PASSWORD;
+    const comparePassword = await user.comparePassword(password.toString());
     if (!comparePassword) {
       ApiResponse.errorResponse(res, 401, 'Invalid password');
       return;
@@ -105,7 +103,7 @@ export const adminProfile = async (req, res) => {
     const { userId } = req.user;
     const user = await userSchema.findById(userId).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.status(200).json(user);
+    return ApiResponse.successResponse(res, 200, 'admin profile fetched successfully', user);
   } catch (err) {
     console.log(err);
     res.status(400).json({ message: err.message });
@@ -167,19 +165,53 @@ export const getUserById = async (req, res) => {
 export const updateUserById = async (req, res) => {
   console.log(req.body, '--------------');
   const { id } = req.params;
+
+  // Whitelist fields strictly to ['status', 'role'] to prevent admin editing user profile data
+  const allowedUpdates = ['status', 'role'];
+  const updates = {};
+  for (const key of allowedUpdates) {
+    if (req.body[key] !== undefined) {
+      updates[key] = req.body[key];
+    }
+  }
+
   try {
     const user = await userSchema.findByIdAndUpdate(
       id,
       {
-        $set: req.body,
+        $set: updates,
       },
       { new: true }
-    );
+    ).select('-password');
     if (!user) {
       return ApiResponse.errorResponse(res, 404, 'User not found');
     }
     return ApiResponse.successResponse(res, 200, 'User updated successfully', user);
   } catch (error) {
     return ApiResponse.errorResponse(res, 400, error.message);
+  }
+};
+
+export const adminResetUserPassword = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!isValidObjectId(userId)) {
+      return ApiResponse.errorResponse(res, 400, 'Invalid user ID');
+    }
+    const user = await userSchema.findById(userId);
+    if (!user) {
+      return ApiResponse.errorResponse(res, 404, 'User not found');
+    }
+    // Generate secure temporary plaintext password SB_[random]!
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    const tempPassword = `SB_${randomSuffix}!`;
+    user.password = tempPassword;
+    await user.save();
+
+    return ApiResponse.successResponse(res, 200, 'User password reset successfully', {
+      tempPassword,
+    });
+  } catch (error) {
+    return ApiResponse.errorResponse(res, 500, error.message);
   }
 };

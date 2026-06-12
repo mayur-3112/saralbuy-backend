@@ -159,19 +159,20 @@ export const factorVerifyOtp = async (req, res) => {
 // Get user profile
 export const getProfile = async (req, res) => {
   try {
-    if (await redisHelper.get(`user_${req.user._id}`)) {
+    const cachedUser = await redisHelper.get(`user_${req.user._id}`);
+    if (cachedUser) {
       console.log('cache user...');
       return ApiResponse.successResponse(
         res,
         200,
         'user fetched successfully',
-        await redisHelper.get(`user_${req.user._id}`)
+        cachedUser
       );
     }
     const user = await userSchema.findById(req.user._id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     await redisHelper.set(`user_${req.user._id}`, user, 24 * 60 * 60);
-    res.status(200).json(user);
+    return ApiResponse.successResponse(res, 200, 'user fetched successfully', user);
   } catch (err) {
     console.log(err);
     await redisHelper.del(`user_${req.user._id}`);

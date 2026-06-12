@@ -169,15 +169,21 @@ export const updateBidUserDetails = async (req, res) => {
     const { id } = req.params;
     const { budgetQuation, availableBrand, earliestDeliveryDate } = req.body;
 
-    const bid = await bidSchema.findByIdAndUpdate(
-      id,
-      { budgetQuation, availableBrand, earliestDeliveryDate },
-      { new: true }
-    );
+    const bid = await bidSchema.findById(id);
 
     if (!bid) {
       return ApiResponse.errorResponse(res, 404, 'Bid not found');
     }
+
+    const userId = req.user.userId || req.user._id;
+    if (bid.sellerId.toString() !== userId.toString()) {
+      return ApiResponse.errorResponse(res, 403, 'Not authorized to update this bid');
+    }
+
+    bid.budgetQuation = budgetQuation;
+    bid.availableBrand = availableBrand;
+    bid.earliestDeliveryDate = earliestDeliveryDate;
+    await bid.save();
 
     return ApiResponse.successResponse(res, 200, 'Bid updated successfully', bid);
   } catch (err) {
@@ -721,35 +727,40 @@ export const getBidByProductId = async (req, res) => {
 };
 
 export const deleteBid = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
+    session.startTransaction();
     const { id } = req.params;
-    const sellerId = req.user.userId;
-    const bid = await bidSchema.findOne({ _id: id, sellerId });
+    const sellerId = req.user.userId || req.user._id;
+    const bid = await bidSchema.findOne({ _id: id, sellerId }).session(session);
     if (!bid) {
       return ApiResponse.errorResponse(res, 403, 'Not authorized to delete this bid');
     }
 
-    try {
-      await requirementSchema.findOneAndUpdate(
-        { productId: bid.productId },
-        { $pull: { sellers: { sellerId: bid.sellerId || sellerId } } }
+    await requirementSchema.findOneAndUpdate(
+      { productId: bid.productId },
+      { $pull: { sellers: { sellerId: bid.sellerId || sellerId } } },
+      { session }
+    );
+
+    await bidSchema.deleteOne({ _id: id }).session(session);
+
+    if (bid.productId) {
+      await productSchema.findByIdAndUpdate(
+        bid.productId,
+        { $inc: { totalBidCount: -1 } },
+        { session }
       );
-    } catch (e) {
-      console.error('Failed to remove seller from requirement:', e.message || e);
     }
 
-    await bidSchema.deleteOne({ _id: id });
-
-    try {
-      if (bid.productId) {
-        await productSchema.findByIdAndUpdate(bid.productId, { $inc: { totalBidCount: -1 } });
-      }
-    } catch (e) {
-      console.error('Failed to decrement product totalBidCount:', e.message || e);
-    }
-
+    await session.commitTransaction();
+    session.endSession();
     return ApiResponse.successResponse(res, 200, 'Bid deleted successfully');
   } catch (err) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    session.endSession();
     return ApiResponse.errorResponse(
       res,
       400,
@@ -770,3 +781,36 @@ export const getBidDetailsBySellerIdAndProductId = async (req, res) => {
     return ApiResponse.errorResponse(res, 400, error.message || 'Failed to fetch bid details');
   }
 };
+
+export const getBidStatsByProductId = async (req, res) => {
+  const { productId } = req.params;
+  try {
+    if (!isValidObjectId(productId)) {
+      return ApiResponse.errorResponse(res, 400, 'Invalid product id');
+    }
+    const bids = await bidSchema.find({ productId }).select('budgetQuation');
+    const totalBids = bids.length;
+    if (totalBids === 0) {
+      return ApiResponse.successResponse(res, 200, 'No bids found', {
+        totalBids: 0,
+        lowestQuote: 0,
+        highestQuote: 0,
+        averageQuote: 0,
+      });
+    }
+    const prices = bids.map(b => Number(b.budgetQuation)).filter(p => !isNaN(p));
+    const lowestQuote = prices.length > 0 ? Math.min(...prices) : 0;
+    const highestQuote = prices.length > 0 ? Math.max(...prices) : 0;
+    const averageQuote = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
+
+    return ApiResponse.successResponse(res, 200, 'Bid stats fetched successfully', {
+      totalBids,
+      lowestQuote,
+      highestQuote,
+      averageQuote,
+    });
+  } catch (error) {
+    return ApiResponse.errorResponse(res, 500, error.message || 'Something went wrong');
+  }
+};
+

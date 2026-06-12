@@ -10,6 +10,7 @@ import {
   getBidByProductId,
   deleteBid,
   getBidDetailsBySellerIdAndProductId,
+  getBidStatsByProductId,
 } from '../controllers/bid.controller.js';
 const router = express.Router();
 router.post('/create/:buyerId/:productId', auth, createBid);
@@ -18,7 +19,8 @@ router.get('/bid-overview/:id', auth, bidOverViewbyId);
 router.put('/update-bid-user-dets/:id', auth, updateBidUserDetails);
 router.get('/get-all-bid', auth, getAllBids);
 router.get('/bid-details/:id', auth, getBidById);
-router.get('/get-bid-by-productId/:productId', getBidByProductId);
+router.get('/get-bid-by-productId/:productId', auth, getBidByProductId);
+router.get('/get-bid-stats/:productId', auth, getBidStatsByProductId);
 router.delete('/delete-bid/:id', auth, deleteBid);
 router.get('/get-bid-details/:productId/:sellerId', auth, getBidDetailsBySellerIdAndProductId);
 export default router;

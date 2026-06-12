@@ -1,8 +1,8 @@
 export const authCookieOptions = {
-  sameSite: 'None',
+  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
   httpOnly: true,
-  secure: true,
+  secure: process.env.NODE_ENV === 'production',
   path: '/',
-  partitioned: true,
+  ...(process.env.NODE_ENV === 'production' && { partitioned: true }),
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };

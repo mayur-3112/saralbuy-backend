@@ -16,7 +16,6 @@ export default function mongoCtx() {
           {
             'Connected DB': mongoose.connection.name,
             'Mongo Host': mongoose.connection.host,
-            'Mongo URI': mongoose.connection._connectionString,
           },
           null,
           2

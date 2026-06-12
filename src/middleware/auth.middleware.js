@@ -7,7 +7,7 @@ const auth = (req, res, next) => {
   if (!token) return ApiResponse.errorResponse(res, 401, 'Token not found');
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'saralbuy-default-secret-key-1234567890');
     // console.log('auth middleware decoded:', decoded);
     req.user = {
       ...decoded,

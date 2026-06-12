@@ -48,27 +48,39 @@ startServer();
 // during promise related error
 process.on('unhandledRejection', async err => {
   console.error('UNHANDLED REJECTION:', err);
-  server.close(async () => {
-    await mongoose.connection.close();
-    await redisClient.quit();
+  if (server) {
+    server.close(async () => {
+      try { await mongoose.connection.close(); } catch (e) { /* ignore */ }
+      try { if (redisClient?.isOpen) await redisClient.quit(); } catch (e) { /* ignore */ }
+      process.exit(1);
+    });
+  } else {
     process.exit(1);
-  });
+  }
 });
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM RECEIVED. Shutting down gracefully');
-  server.close(async () => {
-    await mongoose.connection.close();
-    await redisClient.quit();
+  if (server) {
+    server.close(async () => {
+      try { await mongoose.connection.close(); } catch (e) { /* ignore */ }
+      try { if (redisClient?.isOpen) await redisClient.quit(); } catch (e) { /* ignore */ }
+      process.exit(0);
+    });
+  } else {
     process.exit(0);
-  });
+  }
 });
 // CTRL + C
 process.on('SIGINT', () => {
   console.log('SIGINT RECEIVED. Shutting down gracefully');
-  server.close(async () => {
-    await mongoose.connection.close();
-    await redisClient.quit();
+  if (server) {
+    server.close(async () => {
+      try { await mongoose.connection.close(); } catch (e) { /* ignore */ }
+      try { if (redisClient?.isOpen) await redisClient.quit(); } catch (e) { /* ignore */ }
+      process.exit(0);
+    });
+  } else {
     process.exit(0);
-  });
+  }
 });

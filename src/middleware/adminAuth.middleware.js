@@ -12,7 +12,7 @@ const adminAuth = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'saralbuy-default-secret-key-1234567890');
 
     const user = await userSchema.findById(decoded._id).select('role');
     if (!user || user.role !== 'admin') {

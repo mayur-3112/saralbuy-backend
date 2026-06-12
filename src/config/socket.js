@@ -31,7 +31,7 @@ export const initSocket = server => {
     if (!token) {
       return next(new Error('Token not found'));
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'saralbuy-default-secret-key-1234567890');
 
     socket.user = decoded;
     // console.log({

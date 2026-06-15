@@ -2,6 +2,9 @@ import './config/env.js';
 import express from 'express';
 import router from './routes/index.js';
 import adminRouter from './routes/admin/index.js';
+import fileRoute from './routes/file.route.js';
+import categoryImagesRoute from './routes/categoryImages.route.js';
+import dealSurveyRoute from './routes/dealSurvey.route.js';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -50,6 +53,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morganMiddleware);
 app.use('/api/v1', router);
 app.use('/api/v1/admin', adminRouter);
+app.use('/api/v1/files', fileRoute);
+app.use('/api/v1', categoryImagesRoute);
+app.use('/api/v1/deal-survey', dealSurveyRoute);
 app.get('/health', (req, res) => {
   return res.status(200).json({
     status: 'UP',

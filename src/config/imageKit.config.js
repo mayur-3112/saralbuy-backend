@@ -1,4 +1,18 @@
 import ImageKit from '@imagekit/nodejs';
+import FileUpload from '../models/fileUpload.schema.js';
+
+const DUMMY_KEYS = ['your_public_key', 'dummy_public_key', 'dummy_private_key', ''];
+
+const isImageKitConfigured = () => {
+  const publicKey = process.env.IMAGEKIT_PUBLIC_KEY || '';
+  const privateKey = process.env.IMAGEKIT_PRIVATE_KEY || '';
+  return (
+    publicKey &&
+    privateKey &&
+    !DUMMY_KEYS.includes(publicKey) &&
+    !DUMMY_KEYS.includes(privateKey)
+  );
+};
 
 let client = null;
 const getClient = () => {
@@ -14,6 +28,18 @@ const getClient = () => {
 
 const uploadFile = async file => {
   try {
+    // Fallback to MongoDB storage when ImageKit is not configured
+    if (!isImageKitConfigured()) {
+      const doc = await FileUpload.create({
+        data: file.buffer,
+        contentType: file.mimetype,
+        filename: file.originalname,
+        size: file.size,
+      });
+      const baseUrl = process.env.BACKEND_URL || 'https://saralbuy-backend-2ndv.onrender.com';
+      return `${baseUrl}/api/v1/files/${doc._id}`;
+    }
+
     const activeClient = getClient();
     const result = await activeClient.files.upload({
       file: file.buffer.toString('base64'),

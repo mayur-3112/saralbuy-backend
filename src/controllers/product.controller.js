@@ -96,6 +96,86 @@ export const addProduct = async (req, res) => {
   }
 };
 
+export const addMultipleProducts = async (req, res) => {
+  try {
+    const { commonDetails, items } = req.body;
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return ApiResponse.errorResponse(res, 400, 'Items array is required');
+    }
+
+    const userId = req.user._id || req.user.userId;
+
+    // Parse nested objects if strings
+    if (typeof commonDetails.paymentAndDelivery === 'string') {
+      try { commonDetails.paymentAndDelivery = JSON.parse(commonDetails.paymentAndDelivery); } catch {}
+    }
+
+    // Group items by categoryId
+    const itemsByCategory = {};
+    for (const item of items) {
+      const catId = item.categoryId;
+      if (!itemsByCategory[catId]) itemsByCategory[catId] = [];
+      itemsByCategory[catId].push(item);
+    }
+
+    const createdProducts = [];
+
+    // Create one product post per category
+    for (const catId of Object.keys(itemsByCategory)) {
+      const categoryItems = itemsByCategory[catId];
+      
+      const productPayload = {
+        title: commonDetails.title,
+        description: commonDetails.description,
+        minimumBudget: commonDetails.minimumBudget ? Number(commonDetails.minimumBudget) : undefined,
+        userId: userId,
+        draft: commonDetails.draft === 'true' || commonDetails.draft === true,
+        paymentAndDelivery: commonDetails.paymentAndDelivery,
+        isMultiple: true,
+        categoryId: catId,
+        items: categoryItems.map(item => ({
+          subCategoryId: item.subCategoryId,
+          subCategoryName: item.subCategoryName,
+          brand: item.brand,
+          brandName: item.brandName,
+          quantity: item.quantity,
+          quantityUnit: item.quantityUnit,
+          model: item.model,
+          color: item.color,
+          fuelType: item.fuelType,
+          transmission: item.transmission,
+          conditionOfProduct: item.conditionOfProduct,
+          toolType: item.toolType,
+          typeOfVehicle: item.typeOfVehicle,
+          typeOfProduct: item.typeOfProduct,
+          productType: item.productType,
+          productCondition: item.productCondition,
+          gender: item.gender,
+          rateAService: item.rateAService,
+        }))
+      };
+
+      const product = await productSchema.create(productPayload);
+      
+      // Create requirement entry for the product if not draft
+      if (productPayload.draft === false) {
+        await requirementSchema.create([{
+          productId: product._id,
+          buyerId: userId,
+          sellers: [],
+        }]);
+      }
+
+      createdProducts.push(product);
+    }
+
+    return ApiResponse.successResponse(res, 201, 'Multiple products created successfully', createdProducts);
+  } catch (error) {
+    console.error(error);
+    return ApiResponse.errorResponse(res, 500, error.message || error, null);
+  }
+};
+
 export const getTrendingCategory = async (req, res) => {
   try {
     let trendingProducts = await productSchema.aggregate([

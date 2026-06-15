@@ -72,6 +72,32 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isMultiple: {
+      type: Boolean,
+      default: false,
+    },
+    items: [
+      {
+        subCategoryId: { type: mongoose.Schema.Types.ObjectId },
+        subCategoryName: { type: String },
+        brand: { type: String },
+        brandName: { type: String },
+        quantity: { type: String },
+        quantityUnit: { type: String },
+        model: { type: String },
+        color: { type: String },
+        fuelType: { type: String },
+        transmission: { type: String },
+        conditionOfProduct: { type: String },
+        toolType: { type: String },
+        typeOfVehicle: { type: String },
+        typeOfProduct: { type: String },
+        productType: { type: String },
+        productCondition: { type: String },
+        gender: { type: String },
+        rateAService: { type: String },
+      }
+    ]
   },
   {
     timestamps: true,

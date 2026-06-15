@@ -3,6 +3,7 @@ import auth from '../middleware/auth.middleware.js';
 import { allowUploadFields } from '../utils/multer.js';
 import {
   addProduct,
+  addMultipleProducts,
   getTrendingCategory,
   getHomeProducts,
   getProductByName,
@@ -18,6 +19,7 @@ import {
 const router = express.Router();
 
 router.post('/add-product/:categoryId/:subCategoryId', auth, allowUploadFields(), addProduct);
+router.post('/create-multiple', auth, addMultipleProducts);
 router.get('/get-trending-category', getTrendingCategory);
 router.get('/get-home-products', getHomeProducts);
 router.get('/get-product/:productName', getProductByName);

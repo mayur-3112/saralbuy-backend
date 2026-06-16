@@ -15,11 +15,16 @@ import {
   updateDraftStatus,
   saveAsDraft,
   getLiveExchangeStats,
+  getSimilarProducts,
+  getSimilarServices,
+  updateProduct,
+  uploadMultipleRequirements,
 } from '../controllers/product.controller.js';
 const router = express.Router();
 
 router.post('/add-product/:categoryId/:subCategoryId', auth, allowUploadFields(), addProduct);
 router.post('/create-multiple', auth, addMultipleProducts);
+router.post('/upload-multiple-requirement', auth, allowUploadFields(), uploadMultipleRequirements);
 router.get('/get-trending-category', getTrendingCategory);
 router.get('/get-home-products', getHomeProducts);
 router.get('/get-product/:productName', getProductByName);

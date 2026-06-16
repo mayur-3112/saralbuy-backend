@@ -76,6 +76,10 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isUpload: {
+      type: Boolean,
+      default: false,
+    },
     items: [
       {
         subCategoryId: { type: mongoose.Schema.Types.ObjectId },

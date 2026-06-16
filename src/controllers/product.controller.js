@@ -98,9 +98,9 @@ export const addProduct = async (req, res) => {
 
 export const addMultipleProducts = async (req, res) => {
   try {
-    const { commonDetails, items } = req.body;
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return ApiResponse.errorResponse(res, 400, 'Items array is required');
+    const { commonDetails, categoryGroups } = req.body;
+    if (!categoryGroups || !Array.isArray(categoryGroups) || categoryGroups.length === 0) {
+      return ApiResponse.errorResponse(res, 400, 'Category groups array is required');
     }
 
     const userId = req.user._id || req.user.userId;
@@ -110,30 +110,22 @@ export const addMultipleProducts = async (req, res) => {
       try { commonDetails.paymentAndDelivery = JSON.parse(commonDetails.paymentAndDelivery); } catch {}
     }
 
-    // Group items by categoryId
-    const itemsByCategory = {};
-    for (const item of items) {
-      const catId = item.categoryId;
-      if (!itemsByCategory[catId]) itemsByCategory[catId] = [];
-      itemsByCategory[catId].push(item);
-    }
-
     const createdProducts = [];
 
-    // Create one product post per category
-    for (const catId of Object.keys(itemsByCategory)) {
-      const categoryItems = itemsByCategory[catId];
+    // Create one product post per category group
+    for (const group of categoryGroups) {
+      if (!group.items || group.items.length === 0) continue;
       
       const productPayload = {
         title: commonDetails.title,
-        description: commonDetails.description,
+        description: group.description || commonDetails.description, // Use category specific description
         minimumBudget: commonDetails.minimumBudget ? Number(commonDetails.minimumBudget) : undefined,
         userId: userId,
         draft: commonDetails.draft === 'true' || commonDetails.draft === true,
         paymentAndDelivery: commonDetails.paymentAndDelivery,
         isMultiple: true,
-        categoryId: catId,
-        items: categoryItems.map(item => ({
+        categoryId: group.categoryId,
+        items: group.items.map(item => ({
           subCategoryId: item.subCategoryId,
           subCategoryName: item.subCategoryName,
           brand: item.brand,
@@ -1134,5 +1126,60 @@ export const getLiveExchangeStats = async (req, res) => {
   } catch (error) {
     console.error('Error fetching live stats:', error);
     return ApiResponse.errorResponse(res, 500, 'Failed to fetch live stats');
+  }
+};
+
+
+export const uploadMultipleRequirements = async (req, res) => {
+  try {
+    const { commonDetails, categories } = req.body;
+    const userId = req.user._id || req.user.userId;
+
+    if (!categories || categories.length === 0) {
+      return ApiResponse.errorResponse(res, 400, 'Categories array is required');
+    }
+
+    let documentUrl = null;
+    if (req.files?.document?.[0]) {
+      documentUrl = await uploadFile(req.files.document[0]);
+    } else {
+      return ApiResponse.errorResponse(res, 400, 'Document file is required');
+    }
+
+    const parsedCommonDetails = typeof commonDetails === 'string' ? JSON.parse(commonDetails) : commonDetails;
+    let parsedCategories = typeof categories === 'string' ? JSON.parse(categories) : categories;
+
+    const createdProducts = [];
+    for (const catId of parsedCategories) {
+      const productPayload = {
+        title: parsedCommonDetails.title,
+        description: parsedCommonDetails.description,
+        minimumBudget: parsedCommonDetails.minimumBudget ? Number(parsedCommonDetails.minimumBudget) : undefined,
+        userId: userId,
+        draft: parsedCommonDetails.draft === 'true' || parsedCommonDetails.draft === true,
+        paymentAndDelivery: parsedCommonDetails.paymentAndDelivery,
+        isMultiple: true,
+        isUpload: true,
+        document: documentUrl,
+        categoryId: catId,
+        items: [] // No items for uploaded requirements
+      };
+
+      const product = await productSchema.create(productPayload);
+
+      if (productPayload.draft === false) {
+        await requirementSchema.create([{
+          productId: product._id,
+          buyerId: userId,
+          sellers: [],
+        }]);
+      }
+      createdProducts.push(product);
+    }
+
+    return ApiResponse.successResponse(res, 201, 'Uploaded requirements created successfully', createdProducts);
+  } catch (error) {
+    console.error(error);
+    return ApiResponse.errorResponse(res, 500, error.message || error, null);
   }
 };

@@ -15,9 +15,6 @@ import {
   updateDraftStatus,
   saveAsDraft,
   getLiveExchangeStats,
-  getSimilarProducts,
-  getSimilarServices,
-  updateProduct,
   uploadMultipleRequirements,
 } from '../controllers/product.controller.js';
 const router = express.Router();

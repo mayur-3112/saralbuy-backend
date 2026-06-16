@@ -97,7 +97,7 @@ export const factorSendOtp = async (req, res) => {
 
     if (!useFallback) {
       try {
-        const apiUrl = `https://2factor.in/API/V1/${apiKey}/SMS/+${pNo}/AUTOGEN/SalarBuy`;
+        const apiUrl = `https://2factor.in/API/V1/${apiKey}/SMS/+${pNo}/AUTOGEN/SaralBuy`;
         console.log('Sending OTP to:', pNo);
         console.log('API URL:', apiUrl);
 

@@ -21,6 +21,8 @@ const productSchema = new mongoose.Schema(
     draft: { type: Boolean, default: false },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
     subCategoryId: { type: mongoose.Schema.Types.ObjectId }, // this is subcategoryId from category schema
+    customCategoryName: { type: String },
+    customSubcategoryName: { type: String },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     image: { type: String, default: null },
     document: { type: String, default: null },
@@ -100,6 +102,8 @@ const productSchema = new mongoose.Schema(
         productCondition: { type: String },
         gender: { type: String },
         rateAService: { type: String },
+        customCategoryName: { type: String },
+        customSubcategoryName: { type: String },
       }
     ]
   },

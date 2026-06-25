@@ -31,6 +31,12 @@ const bidSchema = new mongoose.Schema(
       default: 'active',
     },
 
+    quoteStatus: {
+      type: String,
+      enum: ['pending', 'shortlisted', 'accepted', 'rejected'],
+      default: 'pending',
+    },
+
     availableBrand: {
       type: String,
       default: '',

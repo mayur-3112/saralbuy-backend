@@ -798,10 +798,11 @@ export const getBidStatsByProductId = async (req, res) => {
         averageQuote: 0,
       });
     }
-    const prices = bids.map(b => Number(b.budgetQuation)).filter(p => !isNaN(p));
-    const lowestQuote = prices.length > 0 ? Math.min(...prices) : 0;
-    const highestQuote = prices.length > 0 ? Math.max(...prices) : 0;
-    const averageQuote = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
+
+    const quotes = bids.map(bid => bid.budgetQuation);
+    const lowestQuote = Math.min(...quotes);
+    const highestQuote = Math.max(...quotes);
+    const averageQuote = quotes.reduce((a, b) => a + b, 0) / totalBids;
 
     return ApiResponse.successResponse(res, 200, 'Bid stats fetched successfully', {
       totalBids,
@@ -810,7 +811,105 @@ export const getBidStatsByProductId = async (req, res) => {
       averageQuote,
     });
   } catch (error) {
-    return ApiResponse.errorResponse(res, 500, error.message || 'Something went wrong');
+    return ApiResponse.errorResponse(res, 400, error.message || 'Failed to fetch bid stats');
   }
 };
 
+export const updateQuoteStatus = async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+    const { bidId } = req.params;
+    const { quoteStatus } = req.body; // 'shortlisted', 'accepted', 'rejected'
+
+    if (!['shortlisted', 'accepted', 'rejected'].includes(quoteStatus)) {
+      return ApiResponse.errorResponse(res, 400, 'Invalid quote status');
+    }
+
+    const bid = await bidSchema.findById(bidId).session(session);
+    if (!bid) {
+      return ApiResponse.errorResponse(res, 404, 'Bid not found');
+    }
+
+    // Only the buyer can update the quote status!
+    const userId = req.user.userId || req.user._id;
+    if (bid.buyerId.toString() !== userId.toString()) {
+      return ApiResponse.errorResponse(res, 403, 'Not authorized to update this bid status');
+    }
+
+    bid.quoteStatus = quoteStatus;
+    await bid.save({ session });
+
+    // If accepted, we auto-reject other bids for this product
+    if (quoteStatus === 'accepted') {
+       await bidSchema.updateMany(
+         { productId: bid.productId, _id: { $ne: bidId } },
+         { $set: { quoteStatus: 'rejected' } },
+         { session }
+       );
+    }
+
+    // Notify the Seller!
+    try {
+      const productDetails = await productSchema.findById(bid.productId).select('title').session(session);
+      let title = '';
+      let description = '';
+      if (quoteStatus === 'shortlisted') {
+        title = 'Quote Shortlisted!';
+        description = `Your quote for "${productDetails.title}" has been shortlisted by the buyer.`;
+      } else if (quoteStatus === 'accepted') {
+        title = 'Quote Accepted!';
+        description = `Congratulations! Your quote for "${productDetails.title}" was accepted.`;
+      } else if (quoteStatus === 'rejected') {
+        title = 'Quote Rejected';
+        description = `Unfortunately, your quote for "${productDetails.title}" was rejected.`;
+      }
+
+      if (title) {
+        const notif = await productNotificaitonSchema.create([{
+          recipientId: bid.sellerId,
+          senderId: userId,
+          productId: bid.productId,
+          type: 'quote_status_update',
+          title,
+          description,
+          roomId: null,
+          metadata: {
+            quoteStatus,
+            bidId: bid._id.toString(),
+            productId: bid.productId.toString(),
+          },
+        }], { session });
+
+        const io = getIO();
+        const sellerSocketId = onlineUsers.get(bid.sellerId.toString());
+        if (io && sellerSocketId) {
+          io.to(sellerSocketId).emit(SOCKET_EVENTS.NOTIFICATION_NEW, {
+            _id: notif[0]._id.toString(),
+            type: notif[0].type,
+            title: notif[0].title,
+            description: notif[0].description,
+            seen: false,
+            roomId: null,
+            dealId: null,
+            createdAt: notif[0].createdAt,
+            metadata: notif[0].metadata,
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.error('Bid notification error:', notifErr);
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return ApiResponse.successResponse(res, 200, `Bid marked as ${quoteStatus} successfully`, bid);
+  } catch (err) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    session.endSession();
+    return ApiResponse.errorResponse(res, 500, err.message || 'Something went wrong while updating quote status');
+  }
+};

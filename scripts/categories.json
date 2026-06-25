@@ -5,10 +5,32 @@
     "description": "High-quality cement, ready-mix concrete, dry mix mortars, and precast concrete products for structural strength.",
     "image": "/image/Category/industrialImage.png",
     "subCategories": [
-      { "name": "Cement", "brands": ["UltraTech", "ACC", "Ambuja", "Birla Gold", "JK Super"] },
-      { "name": "RMC", "brands": [] },
-      { "name": "Dry Mix Mortars", "brands": [] },
-      { "name": "Precast Concrete Products", "brands": [] }
+      {
+        "name": "Cement",
+        "brands": [
+          "UltraTech",
+          "ACC",
+          "Ambuja",
+          "Birla Gold",
+          "JK Super"
+        ]
+      },
+      {
+        "name": "RMC",
+        "brands": []
+      },
+      {
+        "name": "Dry Mix Mortars",
+        "brands": []
+      },
+      {
+        "name": "Precast Concrete Products",
+        "brands": []
+      },
+      {
+        "name": "Other",
+        "brands": []
+      }
     ]
   },
   {
@@ -17,13 +39,44 @@
     "description": "Durable TMT bars, structural steel sections, MS products, GI products, wire rods, and steel mesh.",
     "image": "/image/Category/industrialImage.png",
     "subCategories": [
-      { "name": "TMT Bars", "brands": ["Tata Tiscon", "JSW NeoSteel", "SAIL", "Jindal Panther", "Vizag Steel"] },
-      { "name": "Structural Steel", "brands": [] },
-      { "name": "Steel Sections", "brands": [] },
-      { "name": "MS Products", "brands": [] },
-      { "name": "GI Products", "brands": [] },
-      { "name": "Wire Rods", "brands": [] },
-      { "name": "Steel Mesh", "brands": [] }
+      {
+        "name": "TMT Bars",
+        "brands": [
+          "Tata Tiscon",
+          "JSW NeoSteel",
+          "SAIL",
+          "Jindal Panther",
+          "Vizag Steel"
+        ]
+      },
+      {
+        "name": "Structural Steel",
+        "brands": []
+      },
+      {
+        "name": "Steel Sections",
+        "brands": []
+      },
+      {
+        "name": "MS Products",
+        "brands": []
+      },
+      {
+        "name": "GI Products",
+        "brands": []
+      },
+      {
+        "name": "Wire Rods",
+        "brands": []
+      },
+      {
+        "name": "Steel Mesh",
+        "brands": []
+      },
+      {
+        "name": "Other",
+        "brands": []
+      }
     ]
   },
   {
@@ -32,20 +85,77 @@
     "description": "Waterproofing systems, admixtures, tile adhesives, grouts, repair mortars, sealants, epoxy systems, coatings, and paints.",
     "image": "/image/Category/industrialImage.png",
     "subCategories": [
-      { "name": "Waterproofing Systems", "brands": ["Dr. Fixit", "Fosroc", "Sika", "Roff"] },
-      { "name": "Admixtures", "brands": [] },
-      { "name": "Tile Adhesives", "brands": [] },
-      { "name": "Grouts", "brands": [] },
-      { "name": "Repair Mortars", "brands": [] },
-      { "name": "Sealants", "brands": [] },
-      { "name": "Epoxy Systems", "brands": [] },
-      { "name": "Protective Coatings", "brands": [] },
-      { "name": "Decorative Paints", "brands": ["Asian Paints", "Berger", "Nerolac", "Dulux", "Indigo"] },
-      { "name": "Industrial Coatings", "brands": [] },
-      { "name": "Primers", "brands": [] },
-      { "name": "Putty", "brands": [] },
-      { "name": "Textures", "brands": [] },
-      { "name": "Specialty Finishes", "brands": [] }
+      {
+        "name": "Waterproofing Systems",
+        "brands": [
+          "Dr. Fixit",
+          "Fosroc",
+          "Sika",
+          "Roff"
+        ]
+      },
+      {
+        "name": "Admixtures",
+        "brands": []
+      },
+      {
+        "name": "Tile Adhesives",
+        "brands": []
+      },
+      {
+        "name": "Grouts",
+        "brands": []
+      },
+      {
+        "name": "Repair Mortars",
+        "brands": []
+      },
+      {
+        "name": "Sealants",
+        "brands": []
+      },
+      {
+        "name": "Epoxy Systems",
+        "brands": []
+      },
+      {
+        "name": "Protective Coatings",
+        "brands": []
+      },
+      {
+        "name": "Decorative Paints",
+        "brands": [
+          "Asian Paints",
+          "Berger",
+          "Nerolac",
+          "Dulux",
+          "Indigo"
+        ]
+      },
+      {
+        "name": "Industrial Coatings",
+        "brands": []
+      },
+      {
+        "name": "Primers",
+        "brands": []
+      },
+      {
+        "name": "Putty",
+        "brands": []
+      },
+      {
+        "name": "Textures",
+        "brands": []
+      },
+      {
+        "name": "Specialty Finishes",
+        "brands": []
+      },
+      {
+        "name": "Other",
+        "brands": []
+      }
     ]
   },
   {
@@ -54,15 +164,52 @@
     "description": "Ceramic and vitrified tiles, marble, granite, quartz, natural stone, and specialized flooring systems.",
     "image": "/image/Category/industrialImage.png",
     "subCategories": [
-      { "name": "Ceramic Tiles", "brands": ["Kajaria", "Somany", "Nitco", "Johnson", "Cera"] },
-      { "name": "Vitrified Tiles", "brands": [] },
-      { "name": "Marble", "brands": [] },
-      { "name": "Granite", "brands": [] },
-      { "name": "Quartz", "brands": [] },
-      { "name": "Natural Stone", "brands": [] },
-      { "name": "Wooden Flooring", "brands": [] },
-      { "name": "Vinyl Flooring", "brands": [] },
-      { "name": "Epoxy Flooring", "brands": [] }
+      {
+        "name": "Ceramic Tiles",
+        "brands": [
+          "Kajaria",
+          "Somany",
+          "Nitco",
+          "Johnson",
+          "Cera"
+        ]
+      },
+      {
+        "name": "Vitrified Tiles",
+        "brands": []
+      },
+      {
+        "name": "Marble",
+        "brands": []
+      },
+      {
+        "name": "Granite",
+        "brands": []
+      },
+      {
+        "name": "Quartz",
+        "brands": []
+      },
+      {
+        "name": "Natural Stone",
+        "brands": []
+      },
+      {
+        "name": "Wooden Flooring",
+        "brands": []
+      },
+      {
+        "name": "Vinyl Flooring",
+        "brands": []
+      },
+      {
+        "name": "Epoxy Flooring",
+        "brands": []
+      },
+      {
+        "name": "Other",
+        "brands": []
+      }
     ]
   },
   {
@@ -71,18 +218,122 @@
     "description": "A wide range of PVC/CPVC pipes, plumbing fittings, faucets, and sanitaryware.",
     "image": "/image/Category/industrialImage.png",
     "subCategories": [
-      { "name": "CPVC Pipes", "brands": ["Astral", "Ashirvad", "Prince Pipes", "Supreme", "Finolex Pipes"] },
-      { "name": "UPVC Pipes", "brands": ["Astral", "Ashirvad", "Prince Pipes", "Supreme", "Finolex Pipes"] },
-      { "name": "SWR Pipes", "brands": ["Astral", "Ashirvad", "Prince Pipes", "Supreme", "Finolex Pipes"] },
-      { "name": "HDPE Pipes", "brands": ["Astral", "Ashirvad", "Prince Pipes", "Supreme", "Finolex Pipes"] },
-      { "name": "GI Pipes", "brands": ["Jindal", "Tata Pipes", "Surya", "Apollo"] },
-      { "name": "Valves", "brands": ["Zoloto", "Leader", "L&T", "Sant"] },
-      { "name": "Plumbing Accessories", "brands": [] },
-      { "name": "Toilets", "brands": ["Jaquar", "Kohler", "Hindware", "Cera", "Parryware"] },
-      { "name": "Basins", "brands": ["Jaquar", "Kohler", "Hindware", "Cera", "Parryware"] },
-      { "name": "Faucets", "brands": ["Jaquar", "Kohler", "Hindware", "Cera", "Parryware"] },
-      { "name": "Showers", "brands": ["Jaquar", "Kohler", "Hindware", "Cera", "Parryware"] },
-      { "name": "Bathroom Accessories", "brands": ["Jaquar", "Kohler", "Hindware", "Cera", "Parryware"] }
+      {
+        "name": "CPVC Pipes",
+        "brands": [
+          "Astral",
+          "Ashirvad",
+          "Prince Pipes",
+          "Supreme",
+          "Finolex Pipes"
+        ]
+      },
+      {
+        "name": "UPVC Pipes",
+        "brands": [
+          "Astral",
+          "Ashirvad",
+          "Prince Pipes",
+          "Supreme",
+          "Finolex Pipes"
+        ]
+      },
+      {
+        "name": "SWR Pipes",
+        "brands": [
+          "Astral",
+          "Ashirvad",
+          "Prince Pipes",
+          "Supreme",
+          "Finolex Pipes"
+        ]
+      },
+      {
+        "name": "HDPE Pipes",
+        "brands": [
+          "Astral",
+          "Ashirvad",
+          "Prince Pipes",
+          "Supreme",
+          "Finolex Pipes"
+        ]
+      },
+      {
+        "name": "GI Pipes",
+        "brands": [
+          "Jindal",
+          "Tata Pipes",
+          "Surya",
+          "Apollo"
+        ]
+      },
+      {
+        "name": "Valves",
+        "brands": [
+          "Zoloto",
+          "Leader",
+          "L&T",
+          "Sant"
+        ]
+      },
+      {
+        "name": "Plumbing Accessories",
+        "brands": []
+      },
+      {
+        "name": "Toilets",
+        "brands": [
+          "Jaquar",
+          "Kohler",
+          "Hindware",
+          "Cera",
+          "Parryware"
+        ]
+      },
+      {
+        "name": "Basins",
+        "brands": [
+          "Jaquar",
+          "Kohler",
+          "Hindware",
+          "Cera",
+          "Parryware"
+        ]
+      },
+      {
+        "name": "Faucets",
+        "brands": [
+          "Jaquar",
+          "Kohler",
+          "Hindware",
+          "Cera",
+          "Parryware"
+        ]
+      },
+      {
+        "name": "Showers",
+        "brands": [
+          "Jaquar",
+          "Kohler",
+          "Hindware",
+          "Cera",
+          "Parryware"
+        ]
+      },
+      {
+        "name": "Bathroom Accessories",
+        "brands": [
+          "Jaquar",
+          "Kohler",
+          "Hindware",
+          "Cera",
+          "Parryware"
+        ]
+      },
+      {
+        "name": "Other",
+        "brands": []
+      }
     ]
   },
   {
@@ -91,18 +342,76 @@
     "description": "Wires, cables, switchgears, solar panels, inverters, and lighting products.",
     "image": "/image/Category/electronicsImage.png",
     "subCategories": [
-      { "name": "Wires", "brands": ["Polycab", "Havells", "Finolex", "KEI", "RR Kabel"] },
-      { "name": "Cables", "brands": [] },
-      { "name": "Switches", "brands": ["Legrand", "Schneider Electric", "L&T", "Siemens", "ABB"] },
-      { "name": "MCBs", "brands": [] },
-      { "name": "Distribution Boards", "brands": [] },
-      { "name": "Panels", "brands": [] },
-      { "name": "Lighting Products", "brands": ["Philips", "Syska", "Wipro", "Crompton", "Halonix"] },
-      { "name": "Solar Panels", "brands": [] },
-      { "name": "Inverters", "brands": [] },
-      { "name": "Batteries", "brands": [] },
-      { "name": "Solar Water Heaters", "brands": [] },
-      { "name": "EV Chargers", "brands": [] }
+      {
+        "name": "Wires",
+        "brands": [
+          "Polycab",
+          "Havells",
+          "Finolex",
+          "KEI",
+          "RR Kabel"
+        ]
+      },
+      {
+        "name": "Cables",
+        "brands": []
+      },
+      {
+        "name": "Switches",
+        "brands": [
+          "Legrand",
+          "Schneider Electric",
+          "L&T",
+          "Siemens",
+          "ABB"
+        ]
+      },
+      {
+        "name": "MCBs",
+        "brands": []
+      },
+      {
+        "name": "Distribution Boards",
+        "brands": []
+      },
+      {
+        "name": "Panels",
+        "brands": []
+      },
+      {
+        "name": "Lighting Products",
+        "brands": [
+          "Philips",
+          "Syska",
+          "Wipro",
+          "Crompton",
+          "Halonix"
+        ]
+      },
+      {
+        "name": "Solar Panels",
+        "brands": []
+      },
+      {
+        "name": "Inverters",
+        "brands": []
+      },
+      {
+        "name": "Batteries",
+        "brands": []
+      },
+      {
+        "name": "Solar Water Heaters",
+        "brands": []
+      },
+      {
+        "name": "EV Chargers",
+        "brands": []
+      },
+      {
+        "name": "Other",
+        "brands": []
+      }
     ]
   },
   {
@@ -111,11 +420,30 @@
     "description": "Toughened glass, aluminium sections, ACP sheets, and complete facade systems.",
     "image": "/image/Category/industrialImage.png",
     "subCategories": [
-      { "name": "Architectural Glass", "brands": [] },
-      { "name": "Toughened Glass", "brands": [] },
-      { "name": "Aluminium Sections", "brands": [] },
-      { "name": "ACP Sheets", "brands": [] },
-      { "name": "Facade Systems", "brands": [] }
+      {
+        "name": "Architectural Glass",
+        "brands": []
+      },
+      {
+        "name": "Toughened Glass",
+        "brands": []
+      },
+      {
+        "name": "Aluminium Sections",
+        "brands": []
+      },
+      {
+        "name": "ACP Sheets",
+        "brands": []
+      },
+      {
+        "name": "Facade Systems",
+        "brands": []
+      },
+      {
+        "name": "Other",
+        "brands": []
+      }
     ]
   },
   {
@@ -124,24 +452,90 @@
     "description": "High-quality wooden doors, uPVC/Aluminium windows, plywood, MDF, particle boards, and hardware.",
     "image": "/image/Category/industrialImage.png",
     "subCategories": [
-      { "name": "Wooden Doors", "brands": [] },
-      { "name": "Steel Doors", "brands": [] },
-      { "name": "Fire Doors", "brands": [] },
-      { "name": "uPVC Windows", "brands": [] },
-      { "name": "Aluminium Windows", "brands": [] },
-      { "name": "Locks", "brands": [] },
-      { "name": "Hinges", "brands": [] },
-      { "name": "Architectural Hardware", "brands": [] },
-      { "name": "Plywood", "brands": ["CenturyPly", "Greenply", "Kitply"] },
-      { "name": "MDF", "brands": [] },
-      { "name": "HDF", "brands": [] },
-      { "name": "Particle Boards", "brands": [] },
-      { "name": "Block Boards", "brands": [] },
-      { "name": "Veneers", "brands": [] },
-      { "name": "Laminates", "brands": ["Sunmica", "Greenlam", "Merino"] },
-      { "name": "Decorative Panels", "brands": [] },
-      { "name": "Wall Cladding", "brands": [] },
-      { "name": "Wallpapers", "brands": [] }
+      {
+        "name": "Wooden Doors",
+        "brands": []
+      },
+      {
+        "name": "Steel Doors",
+        "brands": []
+      },
+      {
+        "name": "Fire Doors",
+        "brands": []
+      },
+      {
+        "name": "uPVC Windows",
+        "brands": []
+      },
+      {
+        "name": "Aluminium Windows",
+        "brands": []
+      },
+      {
+        "name": "Locks",
+        "brands": []
+      },
+      {
+        "name": "Hinges",
+        "brands": []
+      },
+      {
+        "name": "Architectural Hardware",
+        "brands": []
+      },
+      {
+        "name": "Plywood",
+        "brands": [
+          "CenturyPly",
+          "Greenply",
+          "Kitply"
+        ]
+      },
+      {
+        "name": "MDF",
+        "brands": []
+      },
+      {
+        "name": "HDF",
+        "brands": []
+      },
+      {
+        "name": "Particle Boards",
+        "brands": []
+      },
+      {
+        "name": "Block Boards",
+        "brands": []
+      },
+      {
+        "name": "Veneers",
+        "brands": []
+      },
+      {
+        "name": "Laminates",
+        "brands": [
+          "Sunmica",
+          "Greenlam",
+          "Merino"
+        ]
+      },
+      {
+        "name": "Decorative Panels",
+        "brands": []
+      },
+      {
+        "name": "Wall Cladding",
+        "brands": []
+      },
+      {
+        "name": "Wallpapers",
+        "brands": []
+      },
+      {
+        "name": "Other",
+        "brands": []
+      }
     ]
   },
   {
@@ -150,12 +544,42 @@
     "description": "Professional hand tools, power tools, construction and welding equipment.",
     "image": "/image/Category/industrialImage.png",
     "subCategories": [
-      { "name": "Hand Tools", "brands": ["Taparia", "Stanley", "DeWalt"] },
-      { "name": "Power Tools", "brands": ["Bosch", "Makita", "Hitachi"] },
-      { "name": "Construction Equipment", "brands": [] },
-      { "name": "Welding Equipment", "brands": [] },
-      { "name": "Generators", "brands": [] },
-      { "name": "Compressors", "brands": [] }
+      {
+        "name": "Hand Tools",
+        "brands": [
+          "Taparia",
+          "Stanley",
+          "DeWalt"
+        ]
+      },
+      {
+        "name": "Power Tools",
+        "brands": [
+          "Bosch",
+          "Makita",
+          "Hitachi"
+        ]
+      },
+      {
+        "name": "Construction Equipment",
+        "brands": []
+      },
+      {
+        "name": "Welding Equipment",
+        "brands": []
+      },
+      {
+        "name": "Generators",
+        "brands": []
+      },
+      {
+        "name": "Compressors",
+        "brands": []
+      },
+      {
+        "name": "Other",
+        "brands": []
+      }
     ]
   },
   {
@@ -164,39 +588,148 @@
     "description": "M-Sand, Aggregates, Water Tanks, HVAC, Fire Safety, Elevators, and more.",
     "image": "/image/Category/industrialImage.png",
     "subCategories": [
-      { "name": "M-Sand", "brands": [] },
-      { "name": "P-Sand", "brands": [] },
-      { "name": "Aggregates/Jelly", "brands": [] },
-      { "name": "Quarry Products", "brands": [] },
-      { "name": "Water Tanks", "brands": ["Sintex", "Plasto"] },
-      { "name": "Pumps", "brands": ["Kirloskar", "Crompton"] },
-      { "name": "Sewage Treatment Equipment", "brands": [] },
-      { "name": "Water Treatment Systems", "brands": [] },
-      { "name": "Roofing Sheets", "brands": [] },
-      { "name": "Metal Roof Systems", "brands": [] },
-      { "name": "Polycarbonate Sheets", "brands": [] },
-      { "name": "False Ceiling Materials", "brands": [] },
-      { "name": "Insulation Materials", "brands": [] },
-      { "name": "Chillers", "brands": [] },
-      { "name": "Ducting", "brands": [] },
-      { "name": "Ventilation Equipment", "brands": [] },
-      { "name": "Industrial Cooling Systems", "brands": [] },
-      { "name": "Fire Extinguishers", "brands": [] },
-      { "name": "Sprinklers", "brands": [] },
-      { "name": "Fire Alarm Systems", "brands": [] },
-      { "name": "PPE", "brands": [] },
-      { "name": "CCTV", "brands": [] },
-      { "name": "Access Control Systems", "brands": [] },
-      { "name": "Elevators", "brands": [] },
-      { "name": "Escalators", "brands": [] },
-      { "name": "Scaffolding", "brands": [] },
-      { "name": "Formwork Systems", "brands": [] },
-      { "name": "Shuttering Materials", "brands": [] },
-      { "name": "Pavers", "brands": [] },
-      { "name": "Kerb Stones", "brands": [] },
-      { "name": "Artificial Grass", "brands": [] },
-      { "name": "Fencing Materials", "brands": [] },
-      { "name": "Outdoor Furniture", "brands": [] }
+      {
+        "name": "M-Sand",
+        "brands": []
+      },
+      {
+        "name": "P-Sand",
+        "brands": []
+      },
+      {
+        "name": "Aggregates/Jelly",
+        "brands": []
+      },
+      {
+        "name": "Quarry Products",
+        "brands": []
+      },
+      {
+        "name": "Water Tanks",
+        "brands": [
+          "Sintex",
+          "Plasto"
+        ]
+      },
+      {
+        "name": "Pumps",
+        "brands": [
+          "Kirloskar",
+          "Crompton"
+        ]
+      },
+      {
+        "name": "Sewage Treatment Equipment",
+        "brands": []
+      },
+      {
+        "name": "Water Treatment Systems",
+        "brands": []
+      },
+      {
+        "name": "Roofing Sheets",
+        "brands": []
+      },
+      {
+        "name": "Metal Roof Systems",
+        "brands": []
+      },
+      {
+        "name": "Polycarbonate Sheets",
+        "brands": []
+      },
+      {
+        "name": "False Ceiling Materials",
+        "brands": []
+      },
+      {
+        "name": "Insulation Materials",
+        "brands": []
+      },
+      {
+        "name": "Chillers",
+        "brands": []
+      },
+      {
+        "name": "Ducting",
+        "brands": []
+      },
+      {
+        "name": "Ventilation Equipment",
+        "brands": []
+      },
+      {
+        "name": "Industrial Cooling Systems",
+        "brands": []
+      },
+      {
+        "name": "Fire Extinguishers",
+        "brands": []
+      },
+      {
+        "name": "Sprinklers",
+        "brands": []
+      },
+      {
+        "name": "Fire Alarm Systems",
+        "brands": []
+      },
+      {
+        "name": "PPE",
+        "brands": []
+      },
+      {
+        "name": "CCTV",
+        "brands": []
+      },
+      {
+        "name": "Access Control Systems",
+        "brands": []
+      },
+      {
+        "name": "Elevators",
+        "brands": []
+      },
+      {
+        "name": "Escalators",
+        "brands": []
+      },
+      {
+        "name": "Scaffolding",
+        "brands": []
+      },
+      {
+        "name": "Formwork Systems",
+        "brands": []
+      },
+      {
+        "name": "Shuttering Materials",
+        "brands": []
+      },
+      {
+        "name": "Pavers",
+        "brands": []
+      },
+      {
+        "name": "Kerb Stones",
+        "brands": []
+      },
+      {
+        "name": "Artificial Grass",
+        "brands": []
+      },
+      {
+        "name": "Fencing Materials",
+        "brands": []
+      },
+      {
+        "name": "Outdoor Furniture",
+        "brands": []
+      },
+      {
+        "name": "Other",
+        "brands": []
+      }
     ]
   }
 ]

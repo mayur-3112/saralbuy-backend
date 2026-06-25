@@ -45,14 +45,18 @@
     "description": "A wide range of PVC/CPVC pipes, plumbing fittings, faucets, and sanitaryware.",
     "image": "/image/Category/industrialImage.png",
     "subCategories": [
-      {
-        "name": "Pipes & Fittings",
-        "brands": ["Astral", "Ashirvad", "Prince Pipes", "Supreme", "Finolex Pipes"]
-      },
-      {
-        "name": "Faucets & Taps",
-        "brands": ["Jaquar", "Kohler", "Hindware", "Cera", "Parryware"]
-      }
+      { "name": "CPVC Pipes", "brands": ["Astral", "Ashirvad", "Prince Pipes", "Supreme", "Finolex Pipes"] },
+      { "name": "UPVC Pipes", "brands": ["Astral", "Ashirvad", "Prince Pipes", "Supreme", "Finolex Pipes"] },
+      { "name": "SWR Pipes", "brands": ["Astral", "Ashirvad", "Prince Pipes", "Supreme", "Finolex Pipes"] },
+      { "name": "HDPE Pipes", "brands": ["Astral", "Ashirvad", "Prince Pipes", "Supreme", "Finolex Pipes"] },
+      { "name": "GI Pipes", "brands": ["Jindal", "Tata Pipes", "Surya", "Apollo"] },
+      { "name": "Valves", "brands": ["Zoloto", "Leader", "L&T", "Sant"] },
+      { "name": "Plumbing Accessories", "brands": [] },
+      { "name": "Toilets", "brands": ["Jaquar", "Kohler", "Hindware", "Cera", "Parryware"] },
+      { "name": "Basins", "brands": ["Jaquar", "Kohler", "Hindware", "Cera", "Parryware"] },
+      { "name": "Faucets", "brands": ["Jaquar", "Kohler", "Hindware", "Cera", "Parryware"] },
+      { "name": "Showers", "brands": ["Jaquar", "Kohler", "Hindware", "Cera", "Parryware"] },
+      { "name": "Bathroom Accessories", "brands": ["Jaquar", "Kohler", "Hindware", "Cera", "Parryware"] }
     ]
   },
   {

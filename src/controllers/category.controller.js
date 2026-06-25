@@ -3,6 +3,9 @@ import { ApiResponse } from '../helpers/ApiReponse.js';
 import categorySchema from '../models/category.schema.js';
 import redisClient from '../config/redis-config.js';
 import redisHelper from '../helpers/redisHelper.js';
+import fs from 'fs';
+import path from 'path';
+
 export const GetCategories = async (req, res) => {
   try {
     const isCacheData = await redisHelper.get('categories');
@@ -38,5 +41,22 @@ export const GetCategoriesById = async (req, res) => {
   } catch (err) {
     console.log(err);
     return ApiResponse.errorResponse(res, 400, err.message);
+  }
+};
+
+export const SeedCategories = async (req, res) => {
+  try {
+    const seedDataPath = path.resolve(process.cwd(), 'scripts/categories.json');
+    const seedData = JSON.parse(fs.readFileSync(seedDataPath, 'utf8'));
+
+    await categorySchema.deleteMany({});
+    const inserted = await categorySchema.insertMany(seedData);
+    
+    await redisHelper.del('categories');
+
+    return ApiResponse.successResponse(res, 200, 'Categories seeded successfully', inserted);
+  } catch (error) {
+    console.error('Seed error:', error);
+    return ApiResponse.errorResponse(res, 500, error.message);
   }
 };

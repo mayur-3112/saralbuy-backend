@@ -57,8 +57,6 @@ export const addProduct = async (req, res) => {
       brandName: body.brandName,
       categoryId: body.categoryId,
       subCategoryId: body.subCategoryId,
-      customCategoryName: body.customCategoryName,
-      customSubcategoryName: body.customSubcategoryName,
       userId: req.user._id,
       draft: body.draft === 'true' || body.draft === true,
       image: imageUrl,
@@ -80,10 +78,6 @@ export const addProduct = async (req, res) => {
       bidActiveDuration: body.bidActiveDuration,
       quantityUnit: body.quantityUnit,
     });
-
-    if (body.customCategoryName || body.customSubcategoryName) {
-      console.log(`ADMIN NOTIFICATION: New custom category/subcategory suggested: ${body.customCategoryName || 'N/A'} / ${body.customSubcategoryName || 'N/A'}`);
-    }
 
     // create a requirement
     if (body.draft === 'false') {
@@ -150,18 +144,11 @@ export const addMultipleProducts = async (req, res) => {
           productCondition: item.productCondition,
           gender: item.gender,
           rateAService: item.rateAService,
-          customCategoryName: item.customCategoryName || group.customCategoryName,
-          customSubcategoryName: item.customSubcategoryName || group.customSubcategoryName,
         }))
       };
 
       const product = await productSchema.create(productPayload);
       
-      const hasCustomCategory = productPayload.items.some(i => i.customCategoryName || i.customSubcategoryName);
-      if (hasCustomCategory) {
-        console.log(`ADMIN NOTIFICATION: New custom category/subcategory suggested in multi-product upload`);
-      }
-
       // Create requirement entry for the product if not draft
       if (productPayload.draft === false) {
         await requirementSchema.create([{

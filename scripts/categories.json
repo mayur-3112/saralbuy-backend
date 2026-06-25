@@ -731,5 +731,15 @@
         "brands": []
       }
     ]
+  },
+  {
+    "categoryName": "Other",
+    "image": "https://saralbuy.in/other-category.png",
+    "subCategories": [
+      {
+        "name": "Other",
+        "brands": []
+      }
+    ]
   }
 ]

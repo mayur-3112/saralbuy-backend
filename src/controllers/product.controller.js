@@ -566,22 +566,20 @@ export const searchProductsController = async (req, res) => {
 
     // ─── Base filter ──────────────────────────────────────────────────────────
     let filter = { draft: false, isSoldProduct: false };
-    let useTitleSearch = true;
+    let useTitleSearch = Boolean(title && typeof title === 'string' && title.trim().length >= 2);
 
     const catId = category || categoryId;
     const subCatId = req.query.subCategoryId;
 
-    if (catId) {
+    if (catId && catId !== 'All Projects') {
       if (!isValidObjectId(catId)) return ApiResponse.errorResponse(res, 400, 'Invalid categoryId');
       filter.categoryId = new mongoose.Types.ObjectId(catId);
-      useTitleSearch = false;
     }
 
     if (subCatId) {
       if (!isValidObjectId(subCatId))
         return ApiResponse.errorResponse(res, 400, 'Invalid subCategoryId');
       filter.subCategoryId = new mongoose.Types.ObjectId(subCatId);
-      useTitleSearch = false;
     }
 
     const isPriceSort = sort === 'low_to_high' || sort === 'high_to_low';

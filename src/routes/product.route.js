@@ -11,8 +11,10 @@ import {
   getProductById,
   getAllDraftProducts,
   deleteDraftProduct,
+  deleteProduct,
   getDraftProductById,
   updateDraftStatus,
+  updateProduct,
   saveAsDraft,
   getLiveExchangeStats,
   uploadMultipleRequirements,
@@ -30,7 +32,9 @@ router.get('/get-product-by-id/:productId', getProductById);
 router.get('/get-draft-products', auth, getAllDraftProducts);
 router.get('/get-draft-product/:productId', auth, getDraftProductById);
 router.delete('/delete-draft-product/:productId', auth, deleteDraftProduct);
+router.delete('/delete-product/:productId', auth, deleteProduct);
 router.patch('/updatedraft', auth, allowUploadFields(), updateDraftStatus);
+router.patch('/update-product/:productId', auth, allowUploadFields(), updateProduct);
 router.put('/save_as_draft', auth, allowUploadFields(), saveAsDraft);
 router.get('/live-stats', getLiveExchangeStats);
 export default router;

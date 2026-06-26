@@ -805,6 +805,113 @@ export const deleteDraftProduct = async (req, res) => {
   }
 };
 
+export const deleteProduct = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const userId = req.user?.userId;
+    
+    if (!userId) {
+      return ApiResponse.errorResponse(res, 400, 'User not authenticated');
+    }
+
+    const product = await productSchema.findById(productId);
+    if (!product) {
+      return ApiResponse.errorResponse(res, 404, 'Product not found');
+    }
+
+    if (product.userId.toString() !== userId) {
+      return ApiResponse.errorResponse(res, 403, 'Not authorized');
+    }
+
+    await productSchema.deleteOne({ _id: productId });
+    // Also cleanup the associated requirement
+    await requirementSchema.deleteOne({ productId: productId });
+    
+    return ApiResponse.successResponse(res, 200, 'Product deleted successfully', null);
+  } catch (error) {
+    return ApiResponse.errorResponse(res, 400, error.message || 'Failed to delete product');
+  }
+};
+
+export const updateProduct = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return ApiResponse.errorResponse(res, 400, 'User not authenticated');
+    }
+
+    let { productId, products, ...updateFields } = req.body;
+    
+    if (!productId && products) {
+      try {
+        const parsed = typeof products === 'string' ? JSON.parse(products) : products;
+        productId = parsed?.[0]?._id;
+      } catch (e) {}
+    }
+
+    if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
+      return ApiResponse.errorResponse(res, 400, 'Valid productId is required');
+    }
+
+    const product = await productSchema.findById(productId);
+    if (!product) {
+      return ApiResponse.errorResponse(res, 404, 'Product not found');
+    }
+
+    if (product.userId.toString() !== userId) {
+      return ApiResponse.errorResponse(res, 403, 'Not authorized');
+    }
+
+    const catId = updateFields.categoryId || product.categoryId;
+    const subCatId = updateFields.subCategoryId || product.subCategoryId;
+    if (!catId || !isValidObjectId(catId)) {
+      return ApiResponse.errorResponse(res, 400, 'Invalid categoryId');
+    }
+    if (!subCatId || !isValidObjectId(subCatId)) {
+      return ApiResponse.errorResponse(res, 400, 'Invalid subCategoryId');
+    }
+    const categoryExists = await categorySchema.findOne({
+      _id: catId,
+      'subCategories._id': subCatId,
+    });
+    if (!categoryExists) {
+      return ApiResponse.errorResponse(res, 400, 'Selected Category or Subcategory does not exist');
+    }
+
+    if (typeof updateFields.paymentAndDelivery === 'string') {
+      try {
+        updateFields.paymentAndDelivery = JSON.parse(updateFields.paymentAndDelivery);
+      } catch (e) {}
+    }
+
+    let imageUrl = null;
+    let documentUrl = null;
+
+    if (req.files?.image?.[0]) {
+      imageUrl = await uploadFile(req.files.image[0]);
+    }
+    if (req.files?.document?.[0]) {
+      documentUrl = await uploadFile(req.files.document[0]);
+    }
+
+    const updatePayload = {
+      ...updateFields
+    };
+
+    if (imageUrl) updatePayload.image = imageUrl;
+    if (documentUrl) updatePayload.document = documentUrl;
+
+    const updatedProduct = await productSchema.findByIdAndUpdate(productId, updatePayload, {
+      new: true,
+    });
+
+    return ApiResponse.successResponse(res, 200, 'Product updated successfully', updatedProduct);
+  } catch (err) {
+    console.error(err);
+    return ApiResponse.errorResponse(res, 500, err.message || 'Something went wrong');
+  }
+};
+
 export const getDraftProductById = async (req, res) => {
   try {
     const { productId } = req.params;

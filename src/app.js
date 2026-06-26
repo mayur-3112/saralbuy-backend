@@ -34,7 +34,9 @@ app.use(
         normalizedOrigin.endsWith('.ngrok-free.app') ||
         normalizedOrigin.endsWith('.serveousercontent.com') ||
         normalizedOrigin.endsWith('.netlify.app') ||
-        normalizedOrigin.includes('netlify.app')
+        normalizedOrigin.includes('netlify.app') ||
+        normalizedOrigin.endsWith('.vercel.app') ||
+        normalizedOrigin.includes('vercel.app')
       ) {
         callback(null, true);
       } else {

@@ -123,11 +123,12 @@ export const addMultipleProducts = async (req, res) => {
         userId: userId,
         draft: commonDetails.draft === 'true' || commonDetails.draft === true,
         paymentAndDelivery: commonDetails.paymentAndDelivery,
+        bidExpiryDate: commonDetails.bidExpiryDate,
         isMultiple: true,
         categoryId: group.categoryId,
         items: group.items.map(item => ({
-          subCategoryId: item.subCategoryId,
-          subCategoryName: item.subCategoryName,
+          subCategoryId: mongoose.isValidObjectId(item.subCategoryId) ? item.subCategoryId : null,
+          subCategoryName: mongoose.isValidObjectId(item.subCategoryId) ? item.subCategoryName : item.subCategoryId, // store 'other' or custom string in name if not ID
           brand: item.brand,
           brandName: item.brandName,
           quantity: item.quantity,
@@ -1263,6 +1264,7 @@ export const uploadMultipleRequirements = async (req, res) => {
         userId: userId,
         draft: parsedCommonDetails.draft === 'true' || parsedCommonDetails.draft === true,
         paymentAndDelivery: parsedCommonDetails.paymentAndDelivery,
+        bidExpiryDate: parsedCommonDetails.bidExpiryDate,
         isMultiple: true,
         isUpload: true,
         document: documentUrl,

@@ -702,7 +702,7 @@ export const getProductById = async (req, res) => {
     let product = await productSchema
       .findById(productId)
       .populate({ path: 'userId', select: 'firstName lastName address' })
-      .populate({ path: 'categoryId', select: 'categoryName' });
+      .populate({ path: 'categoryId', select: 'categoryName subCategories' });
 
     if (!product) {
       return ApiResponse.errorResponse(res, 404, 'Product not found');

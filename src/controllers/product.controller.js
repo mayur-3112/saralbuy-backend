@@ -1246,8 +1246,10 @@ export const uploadMultipleRequirements = async (req, res) => {
     }
 
     let documentUrl = null;
-    if (req.files?.document?.[0]) {
-      documentUrl = await uploadFile(req.files.document[0]);
+    if (req.files?.document && req.files.document.length > 0) {
+      const uploadPromises = req.files.document.map(file => uploadFile(file));
+      const urls = await Promise.all(uploadPromises);
+      documentUrl = urls.filter(Boolean).join(',');
     } else {
       return ApiResponse.errorResponse(res, 400, 'Document file is required');
     }

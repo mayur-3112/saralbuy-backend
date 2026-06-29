@@ -1238,7 +1238,7 @@ export const getLiveExchangeStats = async (req, res) => {
 
 export const uploadMultipleRequirements = async (req, res) => {
   try {
-    const { commonDetails, categories } = req.body;
+    const { commonDetails, categories, categoryGroups } = req.body;
     const userId = req.user._id || req.user.userId;
 
     if (!categories || categories.length === 0) {
@@ -1254,9 +1254,32 @@ export const uploadMultipleRequirements = async (req, res) => {
 
     const parsedCommonDetails = typeof commonDetails === 'string' ? JSON.parse(commonDetails) : commonDetails;
     let parsedCategories = typeof categories === 'string' ? JSON.parse(categories) : categories;
+    let parsedCategoryGroups = categoryGroups ? (typeof categoryGroups === 'string' ? JSON.parse(categoryGroups) : categoryGroups) : null;
 
     const createdProducts = [];
     for (const catId of parsedCategories) {
+      const matchingGroup = parsedCategoryGroups?.find(g => g.categoryId === catId || g.categoryId?.toString() === catId?.toString());
+      const itemsList = matchingGroup?.items?.map(item => ({
+        subCategoryId: mongoose.isValidObjectId(item.subCategoryId) ? item.subCategoryId : null,
+        subCategoryName: mongoose.isValidObjectId(item.subCategoryId) ? item.subCategoryName : item.subCategoryId,
+        brand: item.brand,
+        brandName: item.brandName,
+        quantity: item.quantity,
+        quantityUnit: item.quantityUnit,
+        model: item.model,
+        color: item.color,
+        fuelType: item.fuelType,
+        transmission: item.transmission,
+        conditionOfProduct: item.conditionOfProduct,
+        toolType: item.toolType,
+        typeOfVehicle: item.typeOfVehicle,
+        typeOfProduct: item.typeOfProduct,
+        productType: item.productType,
+        productCondition: item.productCondition,
+        gender: item.gender,
+        rateAService: item.rateAService,
+      })) || [];
+
       const productPayload = {
         title: parsedCommonDetails.title,
         description: parsedCommonDetails.description,
@@ -1269,7 +1292,7 @@ export const uploadMultipleRequirements = async (req, res) => {
         isUpload: true,
         document: documentUrl,
         categoryId: catId,
-        items: [] // No items for uploaded requirements
+        items: itemsList
       };
 
       const product = await productSchema.create(productPayload);

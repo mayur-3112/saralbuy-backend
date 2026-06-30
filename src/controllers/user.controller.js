@@ -259,19 +259,15 @@ export const updateProfile = async (req, res) => {
       lastName,
       email,
       phone,
-      aadhaarNumber,
       address,
       currentLocation,
       businessName,
     } = req.body;
 
-    const documentFile = req.files?.document?.[0];
     const profilePic = req.files?.image?.[0];
 
-    let documentUrl = null;
     let profilePicUrl = null;
 
-    if (documentFile) documentUrl = await uploadFile(documentFile);
     if (profilePic) profilePicUrl = await uploadFile(profilePic);
 
     if (email) {
@@ -296,9 +292,7 @@ export const updateProfile = async (req, res) => {
     if (lastName) updates.lastName = lastName;
     if (email) updates.email = email;
     if (phone) updates.phone = phone.startsWith('+') ? phone : `+91${phone}`;
-    if (documentUrl) updates.aadhaarImage = documentUrl;
     if (address) updates.address = address;
-    if (aadhaarNumber) updates.aadhaarNumber = aadhaarNumber;
     if (profilePicUrl) updates.profileImage = profilePicUrl;
     if (currentLocation) updates.currentLocation = currentLocation;
     if (businessName) updates.businessName = businessName;

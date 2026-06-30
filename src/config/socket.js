@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import registerSocketHandlers from '../socket/index.js';
 import cookie from 'cookie';
 import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from './secrets.js';
 
 let io;
 export const initSocket = server => {
@@ -31,14 +32,13 @@ export const initSocket = server => {
     if (!token) {
       return next(new Error('Token not found'));
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'saralbuy-default-secret-key-1234567890');
-
-    socket.user = decoded;
-    // console.log({
-    //   'Socket Connected: ': socket.id,
-    //   'Authenticated User: ': decoded._id,
-    // });
-    next();
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      socket.user = decoded;
+      next();
+    } catch (err) {
+      return next(new Error('Invalid or expired token'));
+    }
   });
 
   io.on('connection', socket => {

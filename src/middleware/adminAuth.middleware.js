@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import userSchema from '../models/user.schema.js';
+import { JWT_SECRET } from '../config/secrets.js';
 
 const adminAuth = async (req, res, next) => {
   const token = req.cookies?.adminToken;
@@ -12,7 +13,7 @@ const adminAuth = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'saralbuy-default-secret-key-1234567890');
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     const user = await userSchema.findById(decoded._id).select('role');
     if (!user || user.role !== 'admin') {

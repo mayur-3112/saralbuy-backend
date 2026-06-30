@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { ApiResponse } from '../helpers/ApiReponse.js';
+import { JWT_SECRET } from '../config/secrets.js';
 
 const auth = (req, res, next) => {
   const token = req.cookies?.authToken;
@@ -7,7 +8,7 @@ const auth = (req, res, next) => {
   if (!token) return ApiResponse.errorResponse(res, 401, 'Token not found');
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'saralbuy-default-secret-key-1234567890');
+    const decoded = jwt.verify(token, JWT_SECRET);
     // console.log('auth middleware decoded:', decoded);
     req.user = {
       ...decoded,

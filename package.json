@@ -7,6 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "cross-env NODE_ENV=development nodemon ./server.js --enable-turbo-mode",
     "start": "cross-env NODE_ENV=production node ./server.js ",
+    "seed:categories": "node scripts/seedCategories.js",
+    "sync:categories": "node scripts/syncCategories.js",
     "format": "prettier --write ."
   },
   "keywords": [],

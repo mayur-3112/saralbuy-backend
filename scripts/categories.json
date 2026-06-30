@@ -159,8 +159,8 @@
     ]
   },
   {
-    "categoryName": "Tiles, Stones & Roofing",
-    "title": "Premium Flooring, Tiles & Roofing Solutions",
+    "categoryName": "Tiles, Stones & Flooring",
+    "title": "Premium Tiles, Stones & Flooring Solutions",
     "description": "Ceramic and vitrified tiles, marble, granite, quartz, natural stone, and specialized flooring systems.",
     "image": "/image/Category/industrialImage.png",
     "subCategories": [
@@ -726,16 +726,6 @@
         "name": "Outdoor Furniture",
         "brands": []
       },
-      {
-        "name": "Other",
-        "brands": []
-      }
-    ]
-  },
-  {
-    "categoryName": "Other",
-    "image": "https://saralbuy.in/other-category.png",
-    "subCategories": [
       {
         "name": "Other",
         "brands": []

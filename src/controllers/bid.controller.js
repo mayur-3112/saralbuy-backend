@@ -228,11 +228,21 @@ export const createBid = async (req, res) => {
       throw new Error('budgetQuation is required');
     }
 
-    const isProductIsSold = await productSchema
-      .exists({ _id: productId, isSoldProduct: true })
+    // Prevent a buyer from quoting on their own requirement (market manipulation)
+    const productOwner = await productSchema
+      .findById(productId)
+      .select('userId isSoldProduct')
       .session(session);
-    if (isProductIsSold?._id)
+    if (!productOwner) {
+      throw new Error('Product not found');
+    }
+    if (productOwner.userId.toString() === sellerId.toString()) {
+      throw new Error('You cannot submit a quote on your own requirement');
+    }
+
+    if (productOwner.isSoldProduct) {
       return ApiResponse.errorResponse(res, 400, 'This product is already sold');
+    }
 
     const existingBid = await bidSchema.findOne({ sellerId, buyerId, productId }, null, {
       session,

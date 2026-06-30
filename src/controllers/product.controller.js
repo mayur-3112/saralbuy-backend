@@ -796,10 +796,26 @@ export const getAllDraftProducts = async (req, res) => {
 export const deleteDraftProduct = async (req, res) => {
   try {
     const { productId } = req.params;
-    const deletedProduct = await productSchema.deleteOne({ _id: productId, draft: true });
-    if (deletedProduct.deletedCount === 0) {
+    const userId = req.user?.userId || req.user?._id;
+
+    if (!userId) {
+      return ApiResponse.errorResponse(res, 400, 'User not authenticated');
+    }
+    if (!isValidObjectId(productId)) {
+      return ApiResponse.errorResponse(res, 400, 'Invalid product ID');
+    }
+
+    const draft = await productSchema.findOne({ _id: productId, draft: true });
+    if (!draft) {
       return ApiResponse.errorResponse(res, 404, 'Product not found');
     }
+
+    // ownership check — a user may only delete their own draft
+    if (draft.userId.toString() !== userId.toString()) {
+      return ApiResponse.errorResponse(res, 403, 'Not authorized');
+    }
+
+    const deletedProduct = await productSchema.deleteOne({ _id: productId, draft: true });
     return ApiResponse.successResponse(res, 200, 'Product deleted successfully', deletedProduct);
   } catch (error) {
     return ApiResponse.errorResponse(res, 400, error.message || 'Failed to delete product');

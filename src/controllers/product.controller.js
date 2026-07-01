@@ -1162,88 +1162,110 @@ export const saveAsDraft = async (req, res) => {
   }
 };
 
+/**
+ * Live marketplace stats — surfaced on the landing page ProofStrip.
+ *
+ * HONEST NUMBERS ONLY. This endpoint used to pad every count (+142 suppliers,
+ * +24 requirements, etc.) and inject fake "Bangalore / Peenya / Mysuru"
+ * activity strings when real activity was sparse. Both are gone.
+ *
+ * When a metric is genuinely 0 or can't yet be computed (e.g. avg quote
+ * time with too few samples), we return `null` — the frontend hides that
+ * tile rather than displaying a misleading number. Honest small beats
+ * padded big every time; suppliers who arrive expecting "1,247 verified
+ * suppliers" and find 12 don't come back.
+ */
 export const getLiveExchangeStats = async (req, res) => {
   try {
     const bidSchema = (await import('../models/bid.schema.js')).default;
 
-    // Fetch counts
-    const activeRequirementsCount = await productSchema.countDocuments({ draft: false, isSoldProduct: false });
-    const closedDealsCount = await closeDealSchema.countDocuments({ closedDealStatus: 'completed' });
-    const totalBidsCount = await bidSchema.countDocuments();
-    const activeSuppliersCount = await userSchema.countDocuments({ role: 'user', status: 'active' });
-
-    // Calculate trade volume
-    const closedDeals = await productSchema.find({ isSoldProduct: true }).select('minimumBudget').lean();
-    const activeDeals = await productSchema.find({ draft: false, isSoldProduct: false }).select('minimumBudget').lean();
-    
-    let sourcedVolume = 42000000; // Base ₹4.2 Cr
-    closedDeals.forEach(p => {
-      const budget = Number(p.minimumBudget);
-      if (!isNaN(budget)) sourcedVolume += budget;
-    });
-    activeDeals.forEach(p => {
-      const budget = Number(p.minimumBudget);
-      if (!isNaN(budget)) sourcedVolume += Math.floor(budget * 0.5);
+    // Raw counts — no padding
+    const activeRequirements = await productSchema.countDocuments({ draft: false, isSoldProduct: false });
+    const closedDeals = await closeDealSchema.countDocuments({ closedDealStatus: 'completed' });
+    const totalBids = await bidSchema.countDocuments();
+    // Verified suppliers is now a meaningful concept — count only admin-approved
+    const activeSuppliers = await userSchema.countDocuments({
+      role: 'user',
+      status: 'active',
+      verificationStatus: 'verified',
     });
 
-    // Fetch latest requirements & bids for the live ticker
-    const latestProducts = await productSchema.find({ draft: false })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate({ path: 'userId', select: 'currentLocation' })
-      .populate({ path: 'categoryId', select: 'categoryName' })
-      .lean();
-
-    const latestBids = await bidSchema.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate({ path: 'productId', select: 'title' })
-      .populate({ path: 'sellerId', select: 'currentLocation' })
-      .lean();
-
-    // Format ticker activities
-    const activities = [];
-
-    latestProducts.forEach(p => {
-      const location = p.userId?.currentLocation || 'Karnataka';
-      activities.push({
-        type: 'requirement',
-        title: `Bulk Sourcing RFQ posted for ${p.title} in ${location}`,
-        time: p.createdAt,
-      });
-    });
-
-    latestBids.forEach(b => {
-      if (b.productId) {
-        const location = b.sellerId?.currentLocation || 'Karnataka';
-        activities.push({
-          type: 'quote',
-          title: `Supplier quote submitted for ${b.productId.title} from ${location}`,
-          time: b.createdAt,
-        });
-      }
-    });
-
-    // Sort combined activities by time descending
-    activities.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-
-    // Fallback static activities if DB has minimal logs
-    if (activities.length < 3) {
-      activities.push(
-        { type: 'requirement', title: 'Bulk Sourcing RFQ posted for TMT Steel Rebars in Peenya, Bangalore', time: new Date(Date.now() - 2 * 60 * 1000) },
-        { type: 'quote', title: 'Supplier quote submitted for OPC 53 Cement from Hubballi', time: new Date(Date.now() - 5 * 60 * 1000) },
-        { type: 'requirement', title: 'Bulk Sourcing RFQ posted for CPVC Pipes in Mysuru', time: new Date(Date.now() - 12 * 60 * 1000) },
-        { type: 'quote', title: 'Supplier quote submitted for LED Panel Lights from Bangalore', time: new Date(Date.now() - 18 * 60 * 1000) }
-      );
+    // Sourced volume = sum of minimumBudget on actually-closed deals only.
+    // (The old code counted active-but-not-closed deals at 50% and started
+    // from a ₹4.2 Cr base — pure vanity padding.)
+    const soldProducts = await productSchema.find({ isSoldProduct: true }).select('minimumBudget').lean();
+    let sourcedVolume = 0;
+    for (const p of soldProducts) {
+      const b = Number(p.minimumBudget);
+      if (!isNaN(b) && b > 0) sourcedVolume += b;
     }
 
+    // Real "avg first quote time" — compute from the first bid on each product.
+    // If we have fewer than 5 samples, return null and let the frontend hide
+    // the tile. 5 is arbitrary but low enough to show early, high enough to
+    // stop random extremes dominating the average.
+    let avgFirstQuoteMs = null;
+    const firstBids = await bidSchema.aggregate([
+      { $group: { _id: '$productId', firstBidAt: { $min: '$createdAt' } } },
+      { $lookup: { from: 'products', localField: '_id', foreignField: '_id', as: 'p' } },
+      { $unwind: '$p' },
+      { $project: { diffMs: { $subtract: ['$firstBidAt', '$p.createdAt'] } } },
+      { $match: { diffMs: { $gt: 0 } } }, // guard against clock weirdness
+    ]);
+    if (firstBids.length >= 5) {
+      const sum = firstBids.reduce((s, x) => s + x.diffMs, 0);
+      avgFirstQuoteMs = Math.round(sum / firstBids.length);
+    }
+
+    // Real activity ticker — no fallback fake events. Empty = empty.
+    const [latestProducts, latestBids] = await Promise.all([
+      productSchema
+        .find({ draft: false })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate({ path: 'userId', select: 'currentLocation' })
+        .lean(),
+      bidSchema
+        .find()
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate({ path: 'productId', select: 'title' })
+        .populate({ path: 'sellerId', select: 'currentLocation' })
+        .lean(),
+    ]);
+
+    const activities = [];
+    for (const p of latestProducts) {
+      const location = p.userId?.currentLocation;
+      activities.push({
+        type: 'requirement',
+        title: location
+          ? `RFQ posted for ${p.title} in ${location}`
+          : `RFQ posted for ${p.title}`,
+        time: p.createdAt,
+      });
+    }
+    for (const b of latestBids) {
+      if (!b.productId) continue;
+      const location = b.sellerId?.currentLocation;
+      activities.push({
+        type: 'quote',
+        title: location
+          ? `Quote submitted for ${b.productId.title} from ${location}`
+          : `Quote submitted for ${b.productId.title}`,
+        time: b.createdAt,
+      });
+    }
+    activities.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
     return ApiResponse.successResponse(res, 200, 'Live stats fetched successfully', {
-      sourcedVolume,
-      activeRequirements: activeRequirementsCount + 24, 
-      closedDeals: closedDealsCount + 18,
-      totalBids: totalBidsCount + 52,
-      activeSuppliers: activeSuppliersCount + 142,
-      activities: activities.slice(0, 8),
+      sourcedVolume,       // 0 if no closed deals yet
+      activeRequirements,  // real count
+      closedDeals,         // real count
+      totalBids,           // real count
+      activeSuppliers,     // verified-only count
+      avgFirstQuoteMs,     // null if <5 samples — frontend hides tile
+      activities: activities.slice(0, 8), // may be empty; frontend hides ticker
     });
   } catch (error) {
     console.error('Error fetching live stats:', error);

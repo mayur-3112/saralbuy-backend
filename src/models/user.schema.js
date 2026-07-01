@@ -39,8 +39,39 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+
+    // Business verification (post-Aadhaar model).
+    // Uppercased on save via pre-hook below.
+    gstin: { type: String, default: null, trim: true, uppercase: true },
+    pan:   { type: String, default: null, trim: true, uppercase: true },
+    // Document uploads (ImageKit URLs) — supplier proves what they claim.
+    gstinDocumentUrl: { type: String, default: null },
+    panDocumentUrl:   { type: String, default: null },
+
+    // The single source of truth for "is this supplier trustworthy for a buyer?"
+    //   pending    - submitted docs, waiting on admin
+    //   verified   - admin approved OR future API auto-approved
+    //   rejected   - admin rejected with a note
+    //   unverified - never submitted anything
+    verificationStatus: {
+      type: String,
+      enum: ['unverified', 'pending', 'verified', 'rejected'],
+      default: 'unverified',
+      index: true,
+    },
+    verificationSubmittedAt: { type: Date, default: null },
+    verificationDecidedAt:   { type: Date, default: null },
+    verificationDecidedBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    verificationMethod: {
+      // How was this verification performed? Kept forward-compatible so we can
+      // swap in a paid GSTIN API later without a migration.
+      type: String,
+      enum: ['manual_admin', 'gstin_api', null],
+      default: null,
+    },
+    verificationNotes: { type: String, default: null, trim: true },
   },
-  { 
+  {
     timestamps: true,
     toJSON: { getters: true },
     toObject: { getters: true }
@@ -48,6 +79,30 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ firstName: 1, lastName: 1, email: 1 });
+userSchema.index({ gstin: 1 }, { sparse: true }); // fast lookup + duplicate-GST detection
+
+// Convenient virtual for frontend: shows a green "Verified Supplier" badge
+// only when the admin has affirmatively approved. Any other state = no badge.
+userSchema.virtual('isVerifiedSupplier').get(function () {
+  return this.verificationStatus === 'verified';
+});
+
+// Regex-only shape check on GSTIN. Deep validation happens at admin review time.
+userSchema.pre('save', function (next) {
+  if (this.gstin && this.isModified('gstin')) {
+    const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    if (!gstinRegex.test(this.gstin)) {
+      return next(new Error('Invalid GSTIN format'));
+    }
+  }
+  if (this.pan && this.isModified('pan')) {
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    if (!panRegex.test(this.pan)) {
+      return next(new Error('Invalid PAN format'));
+    }
+  }
+  next();
+});
 userSchema.methods.generateAuthToken = function () {
   return jwt.sign({ _id: this._id, email: this.email }, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,

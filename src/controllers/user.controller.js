@@ -244,7 +244,14 @@ export const getProfile = async (req, res) => {
 export const getUserProfile = async (req, res) => {
   try {
     const { userId } = req.query;
-    const user = await userSchema.findById(userId).select('-password');
+    // Public-safe profile: expose the badge signal (verificationStatus) but
+    // NOT the underlying GSTIN/PAN numbers, uploaded doc URLs, admin notes,
+    // or decision metadata. Those are private to the user + admin.
+    const user = await userSchema
+      .findById(userId)
+      .select(
+        '-password -gstin -pan -gstinDocumentUrl -panDocumentUrl -verificationNotes -verificationDecidedBy -verificationDecidedAt -verificationSubmittedAt -verificationMethod'
+      );
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.status(200).json(user);
   } catch (err) {
@@ -314,4 +321,99 @@ export const logout = (req, res) => {
   // remove from redis cache
   redisHelper.del(`user_${user._id}`);
   res.status(200).json({ message: 'Logged out' });
+};
+
+/**
+ * Supplier submits GSTIN + PAN (+ optional GST cert / PAN card upload) for
+ * business verification. Sets status = 'pending' — an admin then approves or
+ * rejects from the admin panel.
+ *
+ * Re-submission is allowed only when the previous submission was rejected
+ * or the user has never submitted. Verified suppliers can't re-submit (their
+ * badge is stable).
+ */
+export const submitVerification = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?._id;
+    if (!userId) return ApiResponse.errorResponse(res, 401, 'Not authenticated');
+
+    const { gstin, pan, businessName } = req.body;
+    if (!gstin && !pan) {
+      return ApiResponse.errorResponse(res, 400, 'GSTIN or PAN is required');
+    }
+
+    const user = await userSchema.findById(userId);
+    if (!user) return ApiResponse.errorResponse(res, 404, 'User not found');
+    if (user.verificationStatus === 'verified') {
+      return ApiResponse.errorResponse(res, 400, 'You are already verified');
+    }
+    if (user.verificationStatus === 'pending') {
+      return ApiResponse.errorResponse(res, 400, 'Verification already submitted — awaiting admin review');
+    }
+
+    // Duplicate-GSTIN guard: one verified GSTIN can only be associated with one
+    // user. Prevents a scammer registering the same real business under two accounts.
+    if (gstin) {
+      const gstinNorm = gstin.trim().toUpperCase();
+      const existing = await userSchema.findOne({
+        gstin: gstinNorm,
+        verificationStatus: 'verified',
+        _id: { $ne: userId },
+      }).select('_id');
+      if (existing) {
+        return ApiResponse.errorResponse(res, 409, 'This GSTIN is already registered to another verified supplier');
+      }
+      user.gstin = gstinNorm;
+    }
+    if (pan) user.pan = pan.trim().toUpperCase();
+    if (businessName) user.businessName = businessName;
+
+    // Handle uploaded docs
+    if (req.files?.gstinDocument?.[0]) {
+      user.gstinDocumentUrl = await uploadFile(req.files.gstinDocument[0]);
+    }
+    if (req.files?.panDocument?.[0]) {
+      user.panDocumentUrl = await uploadFile(req.files.panDocument[0]);
+    }
+
+    user.verificationStatus = 'pending';
+    user.verificationSubmittedAt = new Date();
+    // clear any previous decision fields on re-submission after rejection
+    user.verificationDecidedAt = null;
+    user.verificationDecidedBy = null;
+    user.verificationNotes = null;
+
+    await user.save();
+
+    return ApiResponse.successResponse(res, 200, 'Verification submitted — admin review pending', {
+      verificationStatus: user.verificationStatus,
+      verificationSubmittedAt: user.verificationSubmittedAt,
+    });
+  } catch (err) {
+    // The schema pre-save hook throws on bad GSTIN/PAN format — surface that as 400.
+    if (err.message?.includes('GSTIN') || err.message?.includes('PAN')) {
+      return ApiResponse.errorResponse(res, 400, err.message);
+    }
+    console.error('submitVerification error:', err);
+    return ApiResponse.errorResponse(res, 500, err.message || 'Failed to submit verification');
+  }
+};
+
+/**
+ * Any user (or public via user-profile page) can read the verification status
+ * of a supplier — that's exactly what powers the "Verified" badge in the UI.
+ * Only the flag + method are exposed publicly; docs & notes are admin-only.
+ */
+export const getVerificationStatus = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?._id;
+    if (!userId) return ApiResponse.errorResponse(res, 401, 'Not authenticated');
+    const user = await userSchema.findById(userId).select(
+      'verificationStatus verificationSubmittedAt verificationDecidedAt verificationNotes gstin pan businessName'
+    );
+    if (!user) return ApiResponse.errorResponse(res, 404, 'User not found');
+    return ApiResponse.successResponse(res, 200, 'Verification status', user);
+  } catch (err) {
+    return ApiResponse.errorResponse(res, 500, err.message);
+  }
 };

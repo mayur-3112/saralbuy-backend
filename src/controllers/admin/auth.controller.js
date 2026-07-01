@@ -215,3 +215,83 @@ export const adminResetUserPassword = async (req, res) => {
     return ApiResponse.errorResponse(res, 500, error.message);
   }
 };
+
+/**
+ * List users pending business verification. Powers the admin verification queue.
+ */
+export const getPendingVerifications = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const filter = { verificationStatus: 'pending' };
+    const [users, total] = await Promise.all([
+      userSchema
+        .find(filter)
+        .select('firstName lastName email phone businessName gstin pan gstinDocumentUrl panDocumentUrl verificationSubmittedAt')
+        .sort({ verificationSubmittedAt: 1 }) // oldest submissions first (FIFO)
+        .skip(skip)
+        .limit(limit),
+      userSchema.countDocuments(filter),
+    ]);
+
+    return ApiResponse.successResponse(res, 200, 'Pending verifications', {
+      users,
+      page,
+      totalPages: Math.ceil(total / limit),
+      total,
+    });
+  } catch (error) {
+    return ApiResponse.errorResponse(res, 500, error.message);
+  }
+};
+
+/**
+ * Approve or reject a supplier's business verification.
+ * Body: { decision: 'approve' | 'reject', notes?: string }
+ */
+export const decideVerification = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { decision, notes } = req.body;
+
+    if (!isValidObjectId(userId)) {
+      return ApiResponse.errorResponse(res, 400, 'Invalid user ID');
+    }
+    if (!['approve', 'reject'].includes(decision)) {
+      return ApiResponse.errorResponse(res, 400, "decision must be 'approve' or 'reject'");
+    }
+    if (decision === 'reject' && (!notes || !notes.trim())) {
+      return ApiResponse.errorResponse(res, 400, 'Reject decisions must include a reason in notes');
+    }
+
+    const user = await userSchema.findById(userId);
+    if (!user) return ApiResponse.errorResponse(res, 404, 'User not found');
+    if (user.verificationStatus !== 'pending') {
+      return ApiResponse.errorResponse(res, 400, `Cannot decide — current status is '${user.verificationStatus}'`);
+    }
+
+    user.verificationStatus = decision === 'approve' ? 'verified' : 'rejected';
+    user.verificationDecidedAt = new Date();
+    user.verificationDecidedBy = req.user.userId || req.user._id;
+    user.verificationMethod = 'manual_admin';
+    if (notes) user.verificationNotes = notes.trim();
+
+    await user.save();
+
+    return ApiResponse.successResponse(
+      res,
+      200,
+      `Verification ${decision === 'approve' ? 'approved' : 'rejected'}`,
+      {
+        _id: user._id,
+        verificationStatus: user.verificationStatus,
+        verificationDecidedAt: user.verificationDecidedAt,
+        verificationNotes: user.verificationNotes,
+      }
+    );
+  } catch (error) {
+    return ApiResponse.errorResponse(res, 500, error.message);
+  }
+};

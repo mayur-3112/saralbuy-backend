@@ -17,4 +17,13 @@ router.get('/profile', auth, userController.getProfile);
 router.get('/user-profile', auth, userController.getUserProfile);
 router.post('/update-profile', auth, allowUploadFields(), userController.updateProfile);
 
+// Business verification (GSTIN/PAN) — supplier trust replacement for Aadhaar
+router.post(
+  '/submit-verification',
+  auth,
+  allowUploadFields([{ name: 'gstinDocument', maxCount: 1 }, { name: 'panDocument', maxCount: 1 }]),
+  userController.submitVerification
+);
+router.get('/verification-status', auth, userController.getVerificationStatus);
+
 export default router;

@@ -8,6 +8,8 @@ import {
   getUser,
   getUserById,
   adminResetUserPassword,
+  getPendingVerifications,
+  decideVerification,
 } from '../../controllers/admin/auth.controller.js';
 import adminAuth from '../../middleware/adminAuth.middleware.js';
 
@@ -21,4 +23,9 @@ router.put('/update-user/:id', adminAuth, updateUserById);
 router.post('/reset-user-password/:userId', adminAuth, adminResetUserPassword);
 router.get('/get-users', adminAuth, getUser);
 router.get('/get-user/:id', adminAuth, getUserById);
+
+// Business verification queue (Aadhaar replacement)
+router.get('/pending-verifications', adminAuth, getPendingVerifications);
+router.post('/decide-verification/:userId', adminAuth, decideVerification);
+
 export default router;

@@ -22,9 +22,11 @@ export const upload = multer({
   },
 });
 
-export const allowUploadFields = () => {
-  return upload.fields([
-    { name: 'image', maxCount: 1 },
-    { name: 'document', maxCount: 5 },
-  ]);
+export const allowUploadFields = (fields) => {
+  return upload.fields(
+    fields || [
+      { name: 'image', maxCount: 1 },
+      { name: 'document', maxCount: 5 },
+    ]
+  );
 };

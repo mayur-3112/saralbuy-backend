@@ -244,14 +244,21 @@ export const getProfile = async (req, res) => {
 export const getUserProfile = async (req, res) => {
   try {
     const { userId } = req.query;
-    // Public-safe profile: expose the badge signal (verificationStatus) but
-    // NOT the underlying GSTIN/PAN numbers, uploaded doc URLs, admin notes,
-    // or decision metadata. Those are private to the user + admin.
-    const user = await userSchema
-      .findById(userId)
-      .select(
-        '-password -gstin -pan -gstinDocumentUrl -panDocumentUrl -verificationNotes -verificationDecidedBy -verificationDecidedAt -verificationSubmittedAt -verificationMethod'
-      );
+    const requesterId = (req.user?.userId || req.user?._id || '').toString();
+    const isOwner = requesterId && requesterId === userId?.toString();
+
+    // Public payload: everything a stranger should see, nothing more.
+    // Contact details (email, phone, home address) are the core of the
+    // anonymity promise — they're stripped for anyone who isn't the
+    // profile's owner. Backend guarantee, not a UI-layer hope.
+    const publicFields =
+      '-password -gstin -pan -gstinDocumentUrl -panDocumentUrl ' +
+      '-verificationNotes -verificationDecidedBy -verificationDecidedAt ' +
+      '-verificationSubmittedAt -verificationMethod ' +
+      // The below fields are only sent when the requester IS the owner:
+      (isOwner ? '' : '-email -phone -address');
+
+    const user = await userSchema.findById(userId).select(publicFields.trim());
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.status(200).json(user);
   } catch (err) {

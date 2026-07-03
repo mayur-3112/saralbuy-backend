@@ -175,7 +175,44 @@ export const getTrendingCategory = async (req, res) => {
     // `$not: { $lt: now }` keeps RFQs with no expiry date or a future one, and drops
     // only the explicitly-past ones. (Was `{ draft: false }` — counted sold + expired.)
     let trendingProducts = await productSchema.aggregate([
-      { $match: { draft: false, isSoldProduct: false, bidExpiryDate: { $not: { $lt: new Date() } } } },
+      { 
+        $match: { 
+          draft: false, 
+          isSoldProduct: false, 
+          $or: [
+            { bidExpiryDate: { $gt: new Date() } },
+            { bidExpiryDate: { $exists: false } },
+            { bidExpiryDate: null }
+          ]
+        } 
+      },
+      // Filter out legacy documents where expiry is undefined but they are older than their active duration (defaulting to 1 day)
+      {
+        $addFields: {
+          calculatedExpiry: {
+            $cond: {
+              if: { $or: [{ $eq: ["$bidExpiryDate", null] }, { $not: ["$bidExpiryDate"] }] },
+              then: {
+                $add: [
+                  "$createdAt",
+                  {
+                    $multiply: [
+                      { $toDouble: { $ifNull: ["$bidActiveDuration", "1"] } },
+                      24, 60, 60, 1000
+                    ]
+                  }
+                ]
+              },
+              else: "$bidExpiryDate"
+            }
+          }
+        }
+      },
+      {
+        $match: {
+          calculatedExpiry: { $gt: new Date() }
+        }
+      },
       {
         $group: {
           _id: '$categoryId',

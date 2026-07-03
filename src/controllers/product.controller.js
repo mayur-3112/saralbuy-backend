@@ -186,7 +186,6 @@ export const getTrendingCategory = async (req, res) => {
       },
 
       { $sort: { count: -1 } },
-      { $limit: 5 },
 
       {
         $lookup: {
@@ -215,7 +214,7 @@ export const getTrendingCategory = async (req, res) => {
 
     // Fallback: If no products have been posted yet, populate with standard seeded categories
     if (!trendingProducts || trendingProducts.length === 0) {
-      const fallbackCats = await categorySchema.find().limit(5).lean();
+      const fallbackCats = await categorySchema.find().lean();
       trendingProducts = fallbackCats.map(cat => ({
         category: {
           _id: cat._id,

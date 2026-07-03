@@ -17,6 +17,13 @@ export const getRecentRequirements = async (req, res) => {
       },
       { $unwind: '$productId' },
       {
+        $match: {
+          'productId.draft': false,
+          'productId.isSoldProduct': false,
+          'productId.bidExpiryDate': { $not: { $lt: new Date() } },
+        },
+      },
+      {
         $lookup: {
           from: 'categories',
           let: { categoryId: '$productId.categoryId' },

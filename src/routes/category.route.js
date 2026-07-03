@@ -6,7 +6,7 @@ const router = express.Router();
 router.get('/get-category/:categoryId', GetCategoriesById);
 // router.put('/update-category/:categoryId',uploadSingleImage,UpdateCategory)
 router.get('/get-category', GetCategories);
-router.get('/seed-now', SeedCategories);
+// router.get('/seed-now', SeedCategories); // Disabled in production/public routes for data security
 router.get('/', (req, res) => {
   res.send('category Index route');
 });

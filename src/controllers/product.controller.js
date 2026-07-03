@@ -171,8 +171,11 @@ export const addMultipleProducts = async (req, res) => {
 
 export const getTrendingCategory = async (req, res) => {
   try {
+    // Count must match what the listing shows: published, not sold, not expired.
+    // `$not: { $lt: now }` keeps RFQs with no expiry date or a future one, and drops
+    // only the explicitly-past ones. (Was `{ draft: false }` — counted sold + expired.)
     let trendingProducts = await productSchema.aggregate([
-      { $match: { draft: false } },
+      { $match: { draft: false, isSoldProduct: false, bidExpiryDate: { $not: { $lt: new Date() } } } },
       {
         $group: {
           _id: '$categoryId',
@@ -236,7 +239,7 @@ export const getTrendingCategory = async (req, res) => {
 export const getHomeProducts = async (req, res) => {
   try {
     const topProductsPerCategory = await productSchema.aggregate([
-      { $match: { draft: false } },
+      { $match: { draft: false, isSoldProduct: false, bidExpiryDate: { $not: { $lt: new Date() } } } },
       {
         $lookup: {
           from: 'categories',
@@ -300,6 +303,7 @@ export const getProductByName = async (req, res) => {
       title: { $regex: productName, $options: 'i' },
       draft: false,
       isSoldProduct: false,
+      bidExpiryDate: { $not: { $lt: new Date() } }, // hide expired RFQs
     };
 
     if (categoryId && categoryId !== 'all') {
@@ -566,7 +570,10 @@ export const searchProductsController = async (req, res) => {
     };
 
     // ─── Base filter ──────────────────────────────────────────────────────────
-    let filter = { draft: false, isSoldProduct: false };
+    // Expired RFQs drop out of browse. `$not: { $lt: now }` also keeps RFQs that
+    // have no expiry date set. Safe to spread into the title strong/medium/weak
+    // sub-filters since it's a plain field key (won't collide with their $and/$or).
+    let filter = { draft: false, isSoldProduct: false, bidExpiryDate: { $not: { $lt: new Date() } } };
     let useTitleSearch = Boolean(title && typeof title === 'string' && title.trim().length >= 2);
 
     const catId = category || categoryId;

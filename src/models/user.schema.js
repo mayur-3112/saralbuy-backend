@@ -88,20 +88,22 @@ userSchema.virtual('isVerifiedSupplier').get(function () {
 });
 
 // Regex-only shape check on GSTIN. Deep validation happens at admin review time.
-userSchema.pre('save', function (next) {
+// Mongoose 9 dropped `next`-callback middleware — hooks are promise-based now, so
+// a `function(next)` hook throws "next is not a function" and blocks every save
+// (i.e. every OTP login). Use an async hook and throw to reject.
+userSchema.pre('save', async function () {
   if (this.gstin && this.isModified('gstin')) {
     const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
     if (!gstinRegex.test(this.gstin)) {
-      return next(new Error('Invalid GSTIN format'));
+      throw new Error('Invalid GSTIN format');
     }
   }
   if (this.pan && this.isModified('pan')) {
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
     if (!panRegex.test(this.pan)) {
-      return next(new Error('Invalid PAN format'));
+      throw new Error('Invalid PAN format');
     }
   }
-  next();
 });
 userSchema.methods.generateAuthToken = function () {
   return jwt.sign({ _id: this._id, email: this.email }, JWT_SECRET, {

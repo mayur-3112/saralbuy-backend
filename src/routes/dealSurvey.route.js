@@ -1,10 +1,10 @@
 import express from 'express';
+import { submitSurvey, checkSurveyStatus } from '../controllers/dealSurvey.controller.js';
 import auth from '../middleware/auth.middleware.js';
-import { submitSurvey, getSurveyByDeal } from '../controllers/dealSurvey.controller.js';
 
 const router = express.Router();
 
-router.post('/', auth, submitSurvey);
-router.get('/:dealId', auth, getSurveyByDeal);
+router.post('/submit', auth, submitSurvey);
+router.get('/status/:dealId', auth, checkSurveyStatus);
 
 export default router;

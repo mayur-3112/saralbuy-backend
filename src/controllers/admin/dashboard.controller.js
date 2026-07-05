@@ -9,6 +9,63 @@ import redisHelper from '../../helpers/redisHelper.js';
 import uploadFile from '../../config/imageKit.config.js';
 import bidSchema from '../../models/bid.schema.js';
 import closeDealSchema from '../../models/closeDeal.schema.js';
+export const liveStats = async (req, res) => {
+  try {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(now);
+    weekStart.setDate(weekStart.getDate() - 6);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const [
+      activeRfqs,
+      quotesToday,
+      dealsToday,
+      dealsCompletedToday,
+      pendingVerifications,
+      pendingModeration,
+      newUsersToday,
+      dealsThisWeek,
+      quotesThisWeek,
+    ] = await Promise.all([
+      productSchema.countDocuments({ draft: { $ne: true }, bidExpiryDate: { $gte: now } }),
+      bidSchema.countDocuments({ createdAt: { $gte: todayStart } }),
+      closeDealSchema.countDocuments({ createdAt: { $gte: todayStart } }),
+      closeDealSchema.countDocuments({ closedDealStatus: 'completed', updatedAt: { $gte: todayStart } }),
+      userSchema.countDocuments({ verificationStatus: 'pending' }),
+      productSchema.countDocuments({ moderationStatus: 'pending', draft: { $ne: true } }),
+      userSchema.countDocuments({ createdAt: { $gte: todayStart } }),
+      // last 7 days deals per day
+      closeDealSchema.aggregate([
+        { $match: { createdAt: { $gte: weekStart } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+      // last 7 days quotes per day
+      bidSchema.aggregate([
+        { $match: { createdAt: { $gte: weekStart } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+
+    return ApiResponse.successResponse(res, 200, 'Live stats fetched', {
+      activeRfqs,
+      quotesToday,
+      dealsToday,
+      dealsCompletedToday,
+      pendingVerifications,
+      pendingModeration,
+      newUsersToday,
+      dealsThisWeek,
+      quotesThisWeek,
+    });
+  } catch (error) {
+    console.error(error);
+    return ApiResponse.errorResponse(res, 500, 'Error fetching live stats');
+  }
+};
+
 export const getCategoriesNames = async (req, res) => {
   try {
     const categories = await categorySchema

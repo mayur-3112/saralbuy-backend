@@ -9,6 +9,12 @@ import { ApiResponse } from '../../helpers/ApiReponse.js';
 import uploadFile from '../../config/imageKit.config.js';
 import { upload } from '../../utils/multer.js';
 import categoriesRoute from './categories.route.js';
+import dealRoute from './deal.route.js';
+import rfqModerationRoute from './rfqModeration.route.js';
+import userVerificationRoute from './userVerification.route.js';
+import disputeRoute from './dispute.route.js';
+import notificationBlastRoute from './notificationBlast.route.js';
+import dealSurveyRoute from './dealSurvey.route.js';
 const router = express.Router();
 
 router.get('/', (_, res) => {
@@ -44,6 +50,12 @@ const routes = [
   { path: '/bid', router: bidListRoute },
   { path: '/requirement', router: requirementListRoute },
   { path: '/categories', router: categoriesRoute },
+  { path: '/deals', router: dealRoute },
+  { path: '/rfq-moderation', router: rfqModerationRoute },
+  { path: '/user-verification', router: userVerificationRoute },
+  { path: '/disputes', router: disputeRoute },
+  { path: '/notification-blast', router: notificationBlastRoute },
+  { path: '/deal-surveys', router: dealSurveyRoute },
 ];
 routes.forEach(route => {
   router.use(route.path, route.router);

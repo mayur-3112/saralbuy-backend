@@ -69,6 +69,15 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    moderationStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected', 'flagged'],
+      default: 'approved',
+    },
+    moderationNote: {
+      type: String,
+      default: '',
+    },
     isSoldProduct: {
       type: Boolean,
       default: false,

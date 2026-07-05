@@ -6,6 +6,7 @@ import bidRouter from './bid.route.js';
 import requirementRouter from './requirement.route.js';
 import cartRouter from './cart.route.js';
 import notificationRouter from './notification.route.js';
+import dealSurveyRouter from './dealSurvey.route.js';
 import { allowUploadFields, upload } from '../utils/multer.js';
 import { ApiResponse } from '../helpers/ApiReponse.js';
 import uploadFile from '../config/imageKit.config.js';
@@ -55,6 +56,7 @@ const routes = [
   { path: '/requirement', router: requirementRouter },
   { path: '/cart', router: cartRouter },
   { path: '/notification', router: notificationRouter },
+  { path: '/deal-survey', router: dealSurveyRouter },
 ];
 
 routes.forEach(route => {

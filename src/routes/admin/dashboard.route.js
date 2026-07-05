@@ -3,6 +3,7 @@ import adminAuth from '../../middleware/adminAuth.middleware.js';
 import {
   getCategoriesNames,
   dashboardAnaltics,
+  liveStats,
   populateProductsById,
   getSubCategoryCount,
   allProducts,
@@ -14,6 +15,7 @@ const router = express.Router();
 router.use(adminAuth);
 router.get('/get-categorie-names', getCategoriesNames);
 router.get('/analtics', dashboardAnaltics);
+router.get('/live-stats', liveStats);
 router.get('/populate-products-by-id', populateProductsById);
 router.get('/get-subcategory-count/:categoryId', getSubCategoryCount);
 router.get('/all-products', allProducts);

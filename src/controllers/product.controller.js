@@ -1223,7 +1223,7 @@ export const getLiveExchangeStats = async (req, res) => {
     const bidSchema = (await import('../models/bid.schema.js')).default;
 
     // Raw counts — no padding
-    const activeRequirements = await productSchema.countDocuments({ draft: false, isSoldProduct: false });
+    const activeRequirements = await productSchema.countDocuments({ draft: false, isSoldProduct: false, bidExpiryDate: { $gt: new Date() } });
     const closedDeals = await closeDealSchema.countDocuments({ closedDealStatus: 'completed' });
     const totalBids = await bidSchema.countDocuments();
     // Verified suppliers is now a meaningful concept — count only admin-approved

@@ -10,6 +10,7 @@ import { getIO } from '../config/socket.js';
 import { onlineUsers } from '../socket/onlineUsers.js';
 import { SOCKET_EVENTS } from '../socket/socketEvents.js';
 import productNotificaitonSchema from '../models/productNotificaiton.schema.js';
+import uploadFile from '../config/imageKit.config.js';
 
 export const getLatestThreeBidAndDraft = async (req, res) => {
   try {
@@ -220,6 +221,22 @@ export const createBid = async (req, res) => {
     const { buyerId, productId } = req.params;
     const sellerId = req.user.userId;
 
+    // When submitted as multipart (document-upload quote flow), objects arrive
+    // as JSON strings and the quotation file arrives on req.file.
+    let businessDets = req.body.businessDets;
+    if (typeof businessDets === 'string') {
+      try {
+        businessDets = JSON.parse(businessDets);
+      } catch {
+        businessDets = undefined;
+      }
+    }
+
+    let quoteDocument = '';
+    if (req.file) {
+      quoteDocument = (await uploadFile(req.file)) || '';
+    }
+
     if (!isValidObjectId(buyerId) || !isValidObjectId(productId)) {
       throw new Error('Invalid sellerId or productId');
     }
@@ -295,9 +312,10 @@ export const createBid = async (req, res) => {
           paymentTerms,
           location,
           buyerNote,
+          quoteDocument,
           businessType,
           ...(businessType === 'business' && {
-            businessDets: req.body.businessDets,
+            businessDets,
           }),
         },
       ],

@@ -81,6 +81,12 @@ const bidSchema = new mongoose.Schema(
       default: '',
     },
 
+    // Seller-uploaded quotation file (used by the document-upload quote flow)
+    quoteDocument: {
+      type: String,
+      default: '',
+    },
+
     businessType: {
       type: String,
       enum: ['individual', 'business'],

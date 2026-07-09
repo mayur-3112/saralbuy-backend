@@ -1,5 +1,6 @@
 import express from 'express';
 import auth from '../middleware/auth.middleware.js';
+import { upload } from '../utils/multer.js';
 import {
   getLatestThreeBidAndDraft,
   bidOverViewbyId,
@@ -14,7 +15,7 @@ import {
   updateQuoteStatus,
 } from '../controllers/bid.controller.js';
 const router = express.Router();
-router.post('/create/:buyerId/:productId', auth, createBid);
+router.post('/create/:buyerId/:productId', auth, upload.single('quoteDocument'), createBid);
 router.get('/get-three-latest-bid-and-draft', auth, getLatestThreeBidAndDraft);
 router.get('/bid-overview/:id', auth, bidOverViewbyId);
 router.put('/update-bid-user-dets/:id', auth, updateBidUserDetails);

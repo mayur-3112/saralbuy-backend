@@ -28,7 +28,7 @@ export const adminGetRfqList = async (req, res) => {
           as: 'user',
         },
       },
-      { $unwind: { path: '$user', preserveNullAndEmpty: false } },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: false } },
       {
         $lookup: {
           from: 'categories',
@@ -37,7 +37,7 @@ export const adminGetRfqList = async (req, res) => {
           as: 'category',
         },
       },
-      { $unwind: { path: '$category', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
       { $match: matchQuery },
       {
         $project: {

@@ -31,7 +31,7 @@ export const adminGetDeals = async (req, res) => {
           as: 'buyer',
         },
       },
-      { $unwind: { path: '$buyer', preserveNullAndEmpty: false } },
+      { $unwind: { path: '$buyer', preserveNullAndEmptyArrays: false } },
       {
         $lookup: {
           from: 'users',
@@ -40,7 +40,7 @@ export const adminGetDeals = async (req, res) => {
           as: 'seller',
         },
       },
-      { $unwind: { path: '$seller', preserveNullAndEmpty: false } },
+      { $unwind: { path: '$seller', preserveNullAndEmptyArrays: false } },
       {
         $lookup: {
           from: 'products',
@@ -49,7 +49,7 @@ export const adminGetDeals = async (req, res) => {
           as: 'product',
         },
       },
-      { $unwind: { path: '$product', preserveNullAndEmpty: false } },
+      { $unwind: { path: '$product', preserveNullAndEmptyArrays: false } },
       { $match: matchQuery },
       {
         $project: {

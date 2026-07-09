@@ -21,7 +21,7 @@ export const adminGetSurveys = async (req, res) => {
           as: 'deal',
         },
       },
-      { $unwind: { path: '$deal', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$deal', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'users',
@@ -30,7 +30,7 @@ export const adminGetSurveys = async (req, res) => {
           as: 'user',
         },
       },
-      { $unwind: { path: '$user', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'products',
@@ -39,7 +39,7 @@ export const adminGetSurveys = async (req, res) => {
           as: 'product',
         },
       },
-      { $unwind: { path: '$product', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$product', preserveNullAndEmptyArrays: true } },
       ...(text && text.trim()
         ? [{
             $match: {

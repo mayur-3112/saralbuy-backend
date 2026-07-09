@@ -23,7 +23,7 @@ export const adminGetReports = async (req, res) => {
           as: 'reporter',
         },
       },
-      { $unwind: { path: '$reporter', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$reporter', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'users',
@@ -32,7 +32,7 @@ export const adminGetReports = async (req, res) => {
           as: 'targetUser',
         },
       },
-      { $unwind: { path: '$targetUser', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$targetUser', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'products',
@@ -41,7 +41,7 @@ export const adminGetReports = async (req, res) => {
           as: 'targetProduct',
         },
       },
-      { $unwind: { path: '$targetProduct', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$targetProduct', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'bids',
@@ -50,7 +50,7 @@ export const adminGetReports = async (req, res) => {
           as: 'targetBid',
         },
       },
-      { $unwind: { path: '$targetBid', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$targetBid', preserveNullAndEmptyArrays: true } },
       ...(text && text.trim()
         ? [
             {

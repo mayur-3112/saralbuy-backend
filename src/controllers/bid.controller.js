@@ -834,6 +834,51 @@ export const getBidsForProductCompare = async (req, res) => {
   }
 };
 
+// SB-013: unified activity timeline for a requirement (buyer-only)
+export const getRequirementTimeline = async (req, res) => {
+  const { productId } = req.params;
+  const userId = req.user.userId || req.user._id;
+  try {
+    if (!isValidObjectId(productId)) {
+      return ApiResponse.errorResponse(res, 400, 'Invalid product id');
+    }
+    const product = await productSchema
+      .findById(productId)
+      .select('userId title createdAt')
+      .lean();
+    if (!product) return ApiResponse.errorResponse(res, 404, 'Product not found');
+    if (product.userId.toString() !== userId.toString()) {
+      return ApiResponse.errorResponse(res, 403, 'Only the buyer can view this timeline');
+    }
+
+    const [bids, deals] = await Promise.all([
+      bidSchema.find({ productId }).populate('sellerId', 'firstName lastName').lean(),
+      closeDealSchema.find({ productId }).populate('sellerId', 'firstName lastName').lean(),
+    ]);
+
+    const nameOf = s => `${s?.firstName || 'Seller'} ${s?.lastName || ''}`.trim();
+    const events = [{ type: 'requirement_posted', at: product.createdAt, label: 'Requirement posted' }];
+
+    for (const b of bids) {
+      const name = nameOf(b.sellerId);
+      events.push({ type: 'quote_placed', at: b.createdAt, label: `${name} placed a quote`, amount: b.budgetQuation });
+      if (b.quoteStatus === 'shortlisted') events.push({ type: 'shortlisted', at: b.updatedAt, label: `${name} shortlisted` });
+      if (b.quoteStatus === 'accepted') events.push({ type: 'accepted', at: b.updatedAt, label: `${name} accepted` });
+    }
+    for (const d of deals) {
+      const name = nameOf(d.sellerId);
+      events.push({ type: 'deal_proposed', at: d.createdAt, label: `Deal proposed with ${name}`, amount: d.amount, agreedTerms: d.agreedTerms });
+      if (d.closedDealStatus === 'completed') events.push({ type: 'deal_completed', at: d.closedAt, label: `Deal completed with ${name}`, amount: d.amount, commissionAmount: d.commissionAmount });
+      if (d.closedDealStatus === 'rejected') events.push({ type: 'deal_rejected', at: d.closedAt, label: `Deal rejected by ${name}` });
+    }
+
+    events.sort((a, b) => new Date(a.at) - new Date(b.at));
+    return ApiResponse.successResponse(res, 200, 'Timeline fetched', events);
+  } catch (error) {
+    return ApiResponse.errorResponse(res, 500, error.message || 'Failed to fetch timeline');
+  }
+};
+
 export const getBidStatsByProductId = async (req, res) => {
   const { productId } = req.params;
   try {

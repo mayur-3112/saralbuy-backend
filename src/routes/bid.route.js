@@ -10,6 +10,7 @@ import {
   getBidById,
   getBidByProductId,
   getBidsForProductCompare,
+  getRequirementTimeline,
   deleteBid,
   getBidDetailsBySellerIdAndProductId,
   getBidStatsByProductId,
@@ -25,6 +26,7 @@ router.get('/get-all-bid', auth, getAllBids);
 router.get('/bid-details/:id', auth, getBidById);
 router.get('/get-bid-by-productId/:productId', auth, getBidByProductId);
 router.get('/compare/:productId', auth, getBidsForProductCompare);
+router.get('/timeline/:productId', auth, getRequirementTimeline);
 router.get('/get-bid-stats/:productId', auth, getBidStatsByProductId);
 router.delete('/delete-bid/:id', auth, deleteBid);
 router.get('/get-bid-details/:productId/:sellerId', auth, getBidDetailsBySellerIdAndProductId);

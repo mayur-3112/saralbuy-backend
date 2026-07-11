@@ -26,6 +26,20 @@ const closedDealSchema = new mongoose.Schema(
     amount: { type: Number, required: true },
     closedAt: { type: Date, default: Date.now },
     initiator: { type: String, default: 'buyer' },
+
+    // SB-011: structured terms both parties agree to at closure (logged, binding)
+    agreedTerms: {
+      finalPrice: { type: Number },
+      quantity: { type: Number },
+      deliveryDate: { type: Date },
+      paymentTerms: { type: String, default: '' },
+      freightTerms: { type: String, default: '' },
+      notes: { type: String, default: '' },
+    },
+
+    // SB-012: platform margin captured on the finalised deal
+    commissionRate: { type: Number, default: 2 }, // percent
+    commissionAmount: { type: Number, default: 0 },
     closedDealStatus: {
       type: String,
       enum: ['pending', 'waiting_seller_approval', 'completed', 'rejected'],

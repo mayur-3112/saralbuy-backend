@@ -27,7 +27,15 @@ const productNotificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['new_bid', 'deal_request', 'deal_accepted', 'deal_rejected', 'chat_rating', 'admin_blast'],
+      enum: [
+        'new_bid',
+        'quote_status_update',
+        'deal_request',
+        'deal_accepted',
+        'deal_rejected',
+        'chat_rating',
+        'admin_blast',
+      ],
       required: true,
     },
     title: { type: String, required: true },

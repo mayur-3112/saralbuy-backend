@@ -281,6 +281,7 @@ const chatSocket = (io, socket) => {
         productId: payload.productId,
         amount: payload.amount,
         yourBudget: productBudget?.minimumBudget || 0,
+        agreedTerms: payload.agreedTerms || {},
         closedDealStatus: 'waiting_seller_approval',
         dealStatus: 'pending',
         initiator: 'buyer',
@@ -293,6 +294,7 @@ const chatSocket = (io, socket) => {
         roomId: payload.roomId,
         buyerId: payload.buyerId,
         sellerId: payload.sellerId,
+        agreedTerms: deal.agreedTerms || {},
       };
 
       if (sellerSocketId) {
@@ -358,6 +360,13 @@ const chatSocket = (io, socket) => {
 
       // update the product is sold
       if (newClosedDealStatus === 'completed') {
+        // SB-012: capture platform margin on the finalised deal
+        const rate = updatedDeal.commissionRate || Number(process.env.PLATFORM_COMMISSION_RATE) || 2;
+        const commissionAmount = Math.round(((updatedDeal.amount * rate) / 100) * 100) / 100;
+        await closeDealSchema.findByIdAndUpdate(dealId, {
+          $set: { commissionRate: rate, commissionAmount },
+        });
+
         await createAndEmitNotification({
           recipientId: updatedDeal.buyerId,
           senderId: updatedDeal.sellerId,

@@ -810,6 +810,30 @@ export const getBidDetailsBySellerIdAndProductId = async (req, res) => {
   }
 };
 
+// SB-008: buyer-only side-by-side comparison of all quotes on a requirement
+export const getBidsForProductCompare = async (req, res) => {
+  const { productId } = req.params;
+  const userId = req.user.userId || req.user._id;
+  try {
+    if (!isValidObjectId(productId)) {
+      return ApiResponse.errorResponse(res, 400, 'Invalid product id');
+    }
+    const product = await productSchema.findById(productId).select('userId title').lean();
+    if (!product) return ApiResponse.errorResponse(res, 404, 'Product not found');
+    if (product.userId.toString() !== userId.toString()) {
+      return ApiResponse.errorResponse(res, 403, 'Only the buyer can compare quotes');
+    }
+    const bids = await bidSchema
+      .find({ productId })
+      .populate('sellerId', 'firstName lastName phone currentLocation address profileImage')
+      .sort({ budgetQuation: 1 })
+      .lean();
+    return ApiResponse.successResponse(res, 200, 'Quotes fetched', bids);
+  } catch (error) {
+    return ApiResponse.errorResponse(res, 500, error.message || 'Failed to fetch quotes');
+  }
+};
+
 export const getBidStatsByProductId = async (req, res) => {
   const { productId } = req.params;
   try {

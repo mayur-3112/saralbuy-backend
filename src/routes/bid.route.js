@@ -9,6 +9,7 @@ import {
   getAllBids,
   getBidById,
   getBidByProductId,
+  getBidsForProductCompare,
   deleteBid,
   getBidDetailsBySellerIdAndProductId,
   getBidStatsByProductId,
@@ -23,6 +24,7 @@ router.put('/update-quote-status/:bidId', auth, updateQuoteStatus);
 router.get('/get-all-bid', auth, getAllBids);
 router.get('/bid-details/:id', auth, getBidById);
 router.get('/get-bid-by-productId/:productId', auth, getBidByProductId);
+router.get('/compare/:productId', auth, getBidsForProductCompare);
 router.get('/get-bid-stats/:productId', auth, getBidStatsByProductId);
 router.delete('/delete-bid/:id', auth, deleteBid);
 router.get('/get-bid-details/:productId/:sellerId', auth, getBidDetailsBySellerIdAndProductId);

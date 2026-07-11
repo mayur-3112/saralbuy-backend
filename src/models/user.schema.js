@@ -40,6 +40,16 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Primary account role the user acts as (a single account can be both).
+    accountRole: {
+      type: String,
+      enum: ['buyer', 'supplier'],
+      default: 'buyer',
+    },
+    organizationName: { type: String, default: null, trim: true },
+    procurementRole: { type: String, default: null, trim: true },
+    supplierCategories: { type: String, default: null },
+
     // Business verification (post-Aadhaar model).
     // Uppercased on save via pre-hook below.
     gstin: { type: String, default: null, trim: true, uppercase: true },

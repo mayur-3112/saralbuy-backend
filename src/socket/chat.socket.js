@@ -62,6 +62,17 @@ const chatSocket = (io, socket) => {
     });
   });
 
+  // Answer a "is this user online?" query — without this, a partner who was
+  // already connected always showed as Offline (the client only heard the
+  // connect/disconnect broadcasts, never the current state on open).
+  socket.on(SOCKET_EVENTS.USER_STATUS, ({ targetUserId } = {}) => {
+    if (!targetUserId) return;
+    socket.emit(SOCKET_EVENTS.USER_STATUS, {
+      userId: targetUserId,
+      isOnline: onlineUsers.has(targetUserId.toString()),
+    });
+  });
+
   //  Fetch seller info for sidebar ──────────────────────────
   socket.on(SOCKET_EVENTS.CHAT_USER, async sellerId => {
     const user = await userSchema.findById(sellerId).lean();

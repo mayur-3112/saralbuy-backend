@@ -429,6 +429,10 @@ export const getRequirementById = async (req, res) => {
         path: 'sellers.sellerId',
         select: '-password -__v',
       })
+      .populate({
+        path: 'sellers.bidId',
+        select: 'quoteStatus budgetQuation',
+      })
       .lean();
 
     if (!requirement) {
@@ -472,7 +476,11 @@ export const getRequirementById = async (req, res) => {
       sellers:
         requirement.sellers?.map(s => ({
           seller: s.sellerId,
-          budgetAmount: s.budgetAmount,
+          // Fall back to the bid's amount when the subdoc copy is missing/zero.
+          budgetAmount: s.budgetAmount || s.bidId?.budgetQuation || 0,
+          // bidId + quoteStatus are required by the buyer's quote actions and tabs.
+          bidId: s.bidId?._id || s.bidId || null,
+          quoteStatus: s.bidId?.quoteStatus || 'pending',
           date: formatDate(s.createdAt || requirement.createdAt),
         })) || [],
     };

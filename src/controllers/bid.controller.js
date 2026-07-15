@@ -11,6 +11,7 @@ import { onlineUsers } from '../socket/onlineUsers.js';
 import { SOCKET_EVENTS } from '../socket/socketEvents.js';
 import productNotificaitonSchema from '../models/productNotificaiton.schema.js';
 import uploadFile from '../config/imageKit.config.js';
+import { maskedPartyView } from '../helpers/maskIdentity.js';
 
 export const getLatestThreeBidAndDraft = async (req, res) => {
   try {
@@ -55,12 +56,27 @@ export const getLatestThreeBidAndDraft = async (req, res) => {
 };
 export const bidOverViewbyId = async (req, res) => {
   const { id } = req.params;
+  const requesterId = req.user?.userId || req.user?._id;
 
   if (!isValidObjectId(id)) {
     return ApiResponse.errorResponse(res, 400, 'Invalid bid or product id');
   }
 
   try {
+    // Ownership check — only the two parties to this bid may view it. Previously
+    // ANY authenticated user who knew/guessed a bid id got the full raw buyer +
+    // seller documents (password hash, phone, email, address, GSTIN, PAN, docs).
+    const bidParties = await bidSchema.findById(id).select('sellerId buyerId').lean();
+    if (!bidParties) {
+      return ApiResponse.errorResponse(res, 404, 'Bid not found');
+    }
+    const isParty =
+      bidParties.sellerId?.toString() === requesterId?.toString() ||
+      bidParties.buyerId?.toString() === requesterId?.toString();
+    if (!isParty) {
+      return ApiResponse.errorResponse(res, 403, 'Not authorized to view this bid');
+    }
+
     const bid = await bidSchema.aggregate([
       {
         $match: {
@@ -148,6 +164,21 @@ export const bidOverViewbyId = async (req, res) => {
           buyerId: 0,
           'product.categoryId': 0,
           'product.subCategoryId': 0,
+          // Never leave the server, for either party, regardless of role.
+          'seller.password': 0,
+          'seller.gstin': 0,
+          'seller.pan': 0,
+          'seller.gstinDocumentUrl': 0,
+          'seller.panDocumentUrl': 0,
+          'seller.verificationNotes': 0,
+          'seller.verificationDecidedBy': 0,
+          'buyer.password': 0,
+          'buyer.gstin': 0,
+          'buyer.pan': 0,
+          'buyer.gstinDocumentUrl': 0,
+          'buyer.panDocumentUrl': 0,
+          'buyer.verificationNotes': 0,
+          'buyer.verificationDecidedBy': 0,
         },
       },
     ]);
@@ -156,7 +187,17 @@ export const bidOverViewbyId = async (req, res) => {
       return ApiResponse.errorResponse(res, 404, 'Bid not found');
     }
 
-    return ApiResponse.successResponse(res, 200, 'Bid overview', bid[0]);
+    const result = bid[0];
+    // This endpoint is a bid-status check, not the deal-close identity reveal —
+    // the buyer's contact details and real name stay masked here regardless of
+    // who's asking (city-level location only). Seller identity is shown to the
+    // buyer by design elsewhere in the app (see getBidsForProductCompare), so we
+    // only mask the buyer side.
+    if (result.buyer) {
+      result.buyer = maskedPartyView(result.buyer);
+    }
+
+    return ApiResponse.successResponse(res, 200, 'Bid overview', result);
   } catch (err) {
     return ApiResponse.errorResponse(
       res,
@@ -605,6 +646,7 @@ export const getAllBids = async (req, res) => {
 export const getBidById = async (req, res) => {
   try {
     const { id } = req.params;
+    const requesterId = req.user?.userId || req.user?._id;
     let dealStatus = 'pending';
     if (!isValidObjectId(id)) {
       return ApiResponse.errorResponse(res, 400, 'Invalid bid id');
@@ -621,11 +663,26 @@ export const getBidById = async (req, res) => {
 
     const productId = bid.productId;
 
+    // Ownership check + role-based scoping. Previously this returned EVERY
+    // seller's bid + price on the product to anyone who knew one bid id on it
+    // (a direct cross-seller price/identity leak) — the buyer comparing quotes
+    // is legitimate, but a seller must only ever see their own bid.
+    const ownerProduct = await productSchema.findById(productId).select('userId').lean();
+    if (!ownerProduct) {
+      return ApiResponse.errorResponse(res, 404, 'Product not found');
+    }
+    const isBuyer = ownerProduct.userId?.toString() === requesterId?.toString();
+    const isBidOwner = bid.sellerId?.toString() === requesterId?.toString();
+    if (!isBuyer && !isBidOwner) {
+      return ApiResponse.errorResponse(res, 403, 'Not authorized to view this bid');
+    }
+
     let allBids = await bidSchema
-      .find({ productId })
+      .find({ productId, ...(isBuyer ? {} : { sellerId: requesterId }) })
       .populate({
         path: 'sellerId',
-        select: '-password -__v',
+        select:
+          '-password -__v -gstin -pan -gstinDocumentUrl -panDocumentUrl -verificationNotes -verificationDecidedBy',
       })
       .lean();
 
@@ -695,15 +752,20 @@ export const getBidById = async (req, res) => {
       const buyerData = await userSchema.findById(product.userId).select('-password -__v').lean();
 
       if (buyerData) {
-        buyer = {
-          _id: buyerData._id,
-          firstName: buyerData.firstName,
-          lastName: buyerData.lastName,
-          email: buyerData.email,
-          phone: buyerData.phone,
-          currentLocation: buyerData.currentLocation || buyerData.address,
-          profileImage: buyerData.profileImage,
-        };
+        // The buyer sees their own full details; a seller viewing this bid gets
+        // the masked view only (name masked, city-level location, no contact
+        // info) — identity reveal happens through the deal-close flow, not here.
+        buyer = isBuyer
+          ? {
+              _id: buyerData._id,
+              firstName: buyerData.firstName,
+              lastName: buyerData.lastName,
+              email: buyerData.email,
+              phone: buyerData.phone,
+              currentLocation: buyerData.currentLocation || buyerData.address,
+              profileImage: buyerData.profileImage,
+            }
+          : maskedPartyView(buyerData);
       }
     }
 
@@ -799,8 +861,28 @@ export const deleteBid = async (req, res) => {
 
 export const getBidDetailsBySellerIdAndProductId = async (req, res) => {
   const { sellerId, productId } = req.params;
+  const requesterId = req.user?.userId || req.user?._id;
   try {
-    const bidDetails = await bidSchema.findOne({ sellerId, productId }).populate('sellerId').lean();
+    if (!isValidObjectId(productId) || !isValidObjectId(sellerId)) {
+      return ApiResponse.errorResponse(res, 400, 'Invalid product or seller id');
+    }
+    // Only the buyer who owns this product may view a seller's quote on it.
+    // Previously ANY authenticated user could call this with any productId +
+    // sellerId pair and get the seller's full raw document — password hash
+    // included, since `.populate('sellerId')` had zero field exclusion.
+    const product = await productSchema.findById(productId).select('userId').lean();
+    if (!product) return ApiResponse.errorResponse(res, 404, 'Product not found');
+    if (product.userId?.toString() !== requesterId?.toString()) {
+      return ApiResponse.errorResponse(res, 403, 'Not authorized to view this quote');
+    }
+
+    const bidDetails = await bidSchema
+      .findOne({ sellerId, productId })
+      .populate(
+        'sellerId',
+        'firstName lastName phone currentLocation address profileImage verificationStatus businessName'
+      )
+      .lean();
     if (!bidDetails) {
       return ApiResponse.errorResponse(res, 404, 'Bid not found for this seller and product');
     }

@@ -11,7 +11,7 @@ import { onlineUsers } from '../socket/onlineUsers.js';
 import { SOCKET_EVENTS } from '../socket/socketEvents.js';
 import productNotificaitonSchema from '../models/productNotificaiton.schema.js';
 import uploadFile from '../config/imageKit.config.js';
-import { maskedPartyView } from '../helpers/maskIdentity.js';
+import { maskedPartyView, cityOnly } from '../helpers/maskIdentity.js';
 
 export const getLatestThreeBidAndDraft = async (req, res) => {
   try {
@@ -991,6 +991,44 @@ export const getBidStatsByProductId = async (req, res) => {
     });
   } catch (error) {
     return ApiResponse.errorResponse(res, 400, error.message || 'Failed to fetch bid stats');
+  }
+};
+
+/**
+ * Anonymized bid activity for a product — what a prospective supplier sees
+ * before/while quoting: how many quotes exist and a per-quote timeline of
+ * non-identifying metadata. Deliberately excludes price (budgetQuation),
+ * seller identity, and exact address — those stay confidential between
+ * each seller and the buyer. Only city-level location (via cityOnly, same
+ * masking already used for buyer identity elsewhere) plus delivery timeline
+ * and brand offered, which are useful competitive signals without revealing
+ * who's behind them.
+ */
+export const getBidActivityByProduct = async (req, res) => {
+  const { productId } = req.params;
+  try {
+    if (!isValidObjectId(productId)) {
+      return ApiResponse.errorResponse(res, 400, 'Invalid product id');
+    }
+    const bids = await bidSchema
+      .find({ productId, status: 'active' })
+      .select('createdAt location earliestDeliveryDate availableBrand')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const activity = bids.map(b => ({
+      createdAt: b.createdAt,
+      location: cityOnly(b.location),
+      earliestDeliveryDate: b.earliestDeliveryDate || null,
+      availableBrand: b.availableBrand || null,
+    }));
+
+    return ApiResponse.successResponse(res, 200, 'Bid activity fetched successfully', {
+      total: activity.length,
+      activity,
+    });
+  } catch (error) {
+    return ApiResponse.errorResponse(res, 400, error.message || 'Failed to fetch bid activity');
   }
 };
 

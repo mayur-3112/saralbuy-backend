@@ -466,6 +466,14 @@ export const getRequirementById = async (req, res) => {
       )}-${String(d.getDate()).padStart(2, '0')}`;
     };
 
+    // Only the buyer manages quotes here, so only the buyer gets every
+    // seller's entry. A seller who is a party to this requirement (isSeller
+    // above) may load the page, but must see nothing beyond their own quote —
+    // otherwise they'd see every competing seller's identity/price/status.
+    const visibleSellers = isBuyer
+      ? requirement.sellers
+      : requirement.sellers.filter(s => s.sellerId._id.toString() === userId);
+
     const responseObj = {
       _id: requirement._id,
       status: requirement.status,
@@ -474,7 +482,7 @@ export const getRequirementById = async (req, res) => {
       product: requirement.productId ? cleanProduct(requirement.productId) : null,
       buyer: requirement.buyerId,
       sellers:
-        requirement.sellers?.map(s => ({
+        visibleSellers?.map(s => ({
           seller: s.sellerId,
           // Fall back to the bid's amount when the subdoc copy is missing/zero.
           budgetAmount: s.budgetAmount || s.bidId?.budgetQuation || 0,

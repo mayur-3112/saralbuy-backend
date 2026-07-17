@@ -11,7 +11,7 @@ import { onlineUsers } from '../socket/onlineUsers.js';
 import { SOCKET_EVENTS } from '../socket/socketEvents.js';
 import productNotificaitonSchema from '../models/productNotificaiton.schema.js';
 import uploadFile from '../config/imageKit.config.js';
-import { maskedPartyView, cityOnly } from '../helpers/maskIdentity.js';
+import { maskedPartyView, cityOnly, maskName } from '../helpers/maskIdentity.js';
 
 export const getLatestThreeBidAndDraft = async (req, res) => {
   try {
@@ -1017,19 +1017,25 @@ export const getBidActivityByProduct = async (req, res) => {
     // which reads totalBidCount, showed 1 — same list must agree with that number.
     const bids = await bidSchema
       .find({ productId })
+      .populate({ path: 'sellerId', select: 'firstName lastName businessName' })
       .select('createdAt location earliestDeliveryDate availableBrand sellerId')
       .sort({ createdAt: 1 })
       .lean();
 
-    // Stable per-supplier label (Supplier 1, 2, ...) by first-bid order —
-    // never the real name, but consistent across the list so a viewer can
-    // still tell repeat activity from the same supplier apart.
+    // Masked real name/business name (e.g. "R**** K***" or "A****** T***"),
+    // same masking already used for buyer identity elsewhere — never the
+    // literal "Supplier 1/2/3" placeholder the user asked to drop.
     const labelBySeller = new Map();
     const activity = bids
       .map(b => {
-        const sellerKey = String(b.sellerId);
+        const sellerKey = String(b.sellerId?._id || b.sellerId);
         if (!labelBySeller.has(sellerKey)) {
-          labelBySeller.set(sellerKey, `Supplier ${labelBySeller.size + 1}`);
+          const seller = b.sellerId;
+          const displayName =
+            seller?.businessName ||
+            [seller?.firstName, seller?.lastName].filter(Boolean).join(' ') ||
+            'Supplier';
+          labelBySeller.set(sellerKey, maskName(displayName));
         }
         return {
           label: labelBySeller.get(sellerKey),

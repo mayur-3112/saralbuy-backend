@@ -1010,8 +1010,13 @@ export const getBidActivityByProduct = async (req, res) => {
     if (!isValidObjectId(productId)) {
       return ApiResponse.errorResponse(res, 400, 'Invalid product id');
     }
+    // Not filtered by status: 'active' — bids get marked 'inactive' when
+    // superseded/merged elsewhere in this file, but that doesn't decrement
+    // product.totalBidCount (only deleteBid does). Filtering here caused the
+    // Bid History count to read 0 while the RFQ page's "Total Quote" badge,
+    // which reads totalBidCount, showed 1 — same list must agree with that number.
     const bids = await bidSchema
-      .find({ productId, status: 'active' })
+      .find({ productId })
       .select('createdAt location earliestDeliveryDate availableBrand sellerId')
       .sort({ createdAt: 1 })
       .lean();

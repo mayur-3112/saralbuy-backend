@@ -1120,6 +1120,7 @@ export const updateQuoteStatus = async (req, res) => {
             quoteStatus,
             bidId: bid._id.toString(),
             productId: bid.productId.toString(),
+            buyerId: bid.buyerId.toString(),
           },
         }], { session });
 

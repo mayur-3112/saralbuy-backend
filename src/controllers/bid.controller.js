@@ -1012,19 +1012,33 @@ export const getBidActivityByProduct = async (req, res) => {
     }
     const bids = await bidSchema
       .find({ productId, status: 'active' })
-      .select('createdAt location earliestDeliveryDate availableBrand')
-      .sort({ createdAt: -1 })
+      .select('createdAt location earliestDeliveryDate availableBrand sellerId')
+      .sort({ createdAt: 1 })
       .lean();
 
-    const activity = bids.map(b => ({
-      createdAt: b.createdAt,
-      location: cityOnly(b.location),
-      earliestDeliveryDate: b.earliestDeliveryDate || null,
-      availableBrand: b.availableBrand || null,
-    }));
+    // Stable per-supplier label (Supplier 1, 2, ...) by first-bid order —
+    // never the real name, but consistent across the list so a viewer can
+    // still tell repeat activity from the same supplier apart.
+    const labelBySeller = new Map();
+    const activity = bids
+      .map(b => {
+        const sellerKey = String(b.sellerId);
+        if (!labelBySeller.has(sellerKey)) {
+          labelBySeller.set(sellerKey, `Supplier ${labelBySeller.size + 1}`);
+        }
+        return {
+          label: labelBySeller.get(sellerKey),
+          createdAt: b.createdAt,
+          location: cityOnly(b.location),
+          earliestDeliveryDate: b.earliestDeliveryDate || null,
+          availableBrand: b.availableBrand || null,
+        };
+      })
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     return ApiResponse.successResponse(res, 200, 'Bid activity fetched successfully', {
       total: activity.length,
+      bidders: labelBySeller.size,
       activity,
     });
   } catch (error) {

@@ -1,5 +1,6 @@
 import { isValidObjectId } from 'mongoose';
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 import uploadFile from '../config/imageKit.config.js';
 import { ApiResponse } from '../helpers/ApiReponse.js';
 import productSchema from '../models/product.schema.js';
@@ -8,6 +9,21 @@ import userSchema from '../models/user.schema.js';
 import closeDealSchema from '../models/closeDeal.schema.js';
 import { upload } from '@imagekit/javascript';
 import requirementSchema from '../models/requirement.schema.js';
+import { JWT_SECRET } from '../config/secrets.js';
+
+// Best-effort caller identity for public/anonymous routes — never rejects
+// the request. Used to quietly exclude a logged-in buyer's own RFQs from
+// their own Explore/browse results without requiring auth on this route.
+function getOptionalUserId(req) {
+  const token = req.cookies?.authToken;
+  if (!token) return null;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return decoded.userId || decoded._id || null;
+  } catch {
+    return null;
+  }
+}
 
 export const addProduct = async (req, res) => {
   try {
@@ -610,6 +626,12 @@ export const searchProductsController = async (req, res) => {
     // have no expiry date set. Safe to spread into the title strong/medium/weak
     // sub-filters since it's a plain field key (won't collide with their $and/$or).
     let filter = { draft: false, isSoldProduct: false, bidExpiryDate: { $not: { $lt: new Date() } } };
+    // A buyer shouldn't see their own posted RFQ in their own Explore/browse
+    // results — this endpoint is for finding OTHER people's requirements.
+    const callerUserId = getOptionalUserId(req);
+    if (callerUserId) {
+      filter.userId = { $ne: new mongoose.Types.ObjectId(callerUserId) };
+    }
     let useTitleSearch = Boolean(title && typeof title === 'string' && title.trim().length >= 2);
 
     const catId = category || categoryId;
@@ -639,7 +661,11 @@ export const searchProductsController = async (req, res) => {
           { currentLocation: { $regex: location.trim(), $options: 'i' } },
         ],
       }).select('_id');
-      const userIds = matchingUsers.map(u => u._id);
+      // This overwrites the earlier own-RFQ exclusion (both target `userId`) —
+      // re-apply it here by dropping the caller from the matched-location set.
+      const userIds = matchingUsers
+        .map(u => u._id)
+        .filter(id => !callerUserId || id.toString() !== callerUserId.toString());
       filter.userId = { $in: userIds };
     }
 

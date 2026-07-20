@@ -50,6 +50,15 @@ const userSchema = new mongoose.Schema(
     procurementRole: { type: String, default: null, trim: true },
     supplierCategories: { type: String, default: null },
 
+    // Supplier "Organisation Details" — profile/storefront-style fields.
+    // All optional at the schema level (existing users without them just
+    // read as null; no migration needed).
+    roleInCompany: { type: String, default: null, trim: true },
+    website: { type: String, default: null, trim: true },
+    businessDescription: { type: String, default: null },
+    accomplishments: { type: String, default: null },
+    topProblemsSolved: { type: String, default: null },
+
     // Business verification (post-Aadhaar model).
     // Uppercased on save via pre-hook below.
     gstin: { type: String, default: null, trim: true, uppercase: true },

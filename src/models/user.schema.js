@@ -58,6 +58,9 @@ const userSchema = new mongoose.Schema(
     businessDescription: { type: String, default: null },
     accomplishments: { type: String, default: null },
     topProblemsSolved: { type: String, default: null },
+    industriesServed: { type: String, default: null },
+    certifications: { type: String, default: null },
+    yearsInBusiness: { type: Number, default: null },
 
     // Business verification (post-Aadhaar model).
     // Uppercased on save via pre-hook below.

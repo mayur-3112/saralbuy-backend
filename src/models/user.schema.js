@@ -60,7 +60,9 @@ const userSchema = new mongoose.Schema(
     topProblemsSolved: { type: String, default: null },
     industriesServed: { type: String, default: null },
     certifications: { type: String, default: null },
-    yearsInBusiness: { type: Number, default: null },
+    // Founding year — displayed profile-side as "since <year>" and used to
+    // derive years-in-business, so it never goes stale like a raw count would.
+    businessSince: { type: Number, default: null },
 
     // Business verification (post-Aadhaar model).
     // Uppercased on save via pre-hook below.

@@ -12,10 +12,11 @@ import {
   decideVerification,
 } from '../../controllers/admin/auth.controller.js';
 import adminAuth from '../../middleware/adminAuth.middleware.js';
+import { adminLoginLimiter } from '../../middleware/otpRateLimit.middleware.js';
 
 const router = express.Router();
 
-router.post('/login', login);
+router.post('/login', adminLoginLimiter, login);
 // router.post('/signup', register); // Disabled for security. Use CLI script to seed admins.
 router.get('/logout', adminAuth, logout);
 router.get('/profile', adminAuth, adminProfile);

@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
     "dev": "cross-env NODE_ENV=development nodemon ./server.js --enable-turbo-mode",
     "start": "cross-env NODE_ENV=production node ./server.js ",
     "seed:categories": "node scripts/seedCategories.js",
@@ -38,5 +38,10 @@
     "redis": "^5.12.1",
     "socket.io": "^4.8.3",
     "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.2.0",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.10"
   }
 }

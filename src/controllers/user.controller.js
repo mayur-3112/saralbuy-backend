@@ -4,6 +4,7 @@ import userSchema from '../models/user.schema.js';
 import uploadFile from '../config/imageKit.config.js';
 import { authCookieOptions } from '../utils/cookieOptions.js';
 import redisHelper from '../helpers/redisHelper.js';
+import closeDealSchema from '../models/closeDeal.schema.js';
 
 const otpStore = new Map();
 
@@ -247,20 +248,36 @@ export const getUserProfile = async (req, res) => {
     const requesterId = (req.user?.userId || req.user?._id || '').toString();
     const isOwner = requesterId && requesterId === userId?.toString();
 
+    // A closed deal between the requester and this profile is the platform's
+    // trigger for lifting anonymity — same rule Chat's CloseDeal reveal uses,
+    // just checked here too so the profile page reflects it on its own.
+    let dealClosedWithRequester = false;
+    if (!isOwner && requesterId) {
+      const closedDeal = await closeDealSchema.findOne({
+        closedDealStatus: 'completed',
+        $or: [
+          { buyerId: requesterId, sellerId: userId },
+          { buyerId: userId, sellerId: requesterId },
+        ],
+      }).select('_id');
+      dealClosedWithRequester = !!closedDeal;
+    }
+
     // Public payload: everything a stranger should see, nothing more.
     // Contact details (email, phone, home address) are the core of the
     // anonymity promise — they're stripped for anyone who isn't the
-    // profile's owner. Backend guarantee, not a UI-layer hope.
+    // profile's owner or a party to a completed deal with them.
     const publicFields =
       '-password -gstin -pan -gstinDocumentUrl -panDocumentUrl ' +
       '-verificationNotes -verificationDecidedBy -verificationDecidedAt ' +
       '-verificationSubmittedAt -verificationMethod ' +
-      // The below fields are only sent when the requester IS the owner:
-      (isOwner ? '' : '-email -phone -address');
+      // The below fields are only sent when the requester IS the owner or a
+      // completed deal has already lifted anonymity between the two of them:
+      (isOwner || dealClosedWithRequester ? '' : '-email -phone -address');
 
     const user = await userSchema.findById(userId).select(publicFields.trim());
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.status(200).json(user);
+    res.status(200).json({ ...user.toObject(), contactRevealed: isOwner || dealClosedWithRequester });
   } catch (err) {
     console.log(err);
     res.status(400).json({ message: err.message });

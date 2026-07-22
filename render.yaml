@@ -1,0 +1,45 @@
+# Render Blueprint — defines the staging backend as code so it's a single
+# "New > Blueprint" import instead of manually re-clicking through every
+# setting the production service already has. Deploys from the `develop`
+# branch; production (main branch) is unaffected by this file — it was
+# created directly in the dashboard, not via a blueprint, and stays that way.
+#
+# To use: Render dashboard > New > Blueprint > select this repo > it reads
+# this file > fill in the "sync: false" secrets it prompts for > deploy.
+services:
+  - type: web
+    name: saralbuy-backend-staging
+    runtime: node
+    branch: develop
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8000
+      # Point this at a SEPARATE database name on the same Atlas cluster
+      # (e.g. mongodb+srv://.../saralbuy_staging) — never the production DB.
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLIENT_URL
+        sync: false # the staging frontend's Vercel preview URL for `develop`
+      - key: ADMIN_URL
+        sync: false
+      - key: EXTRA_ALLOWED_ORIGINS
+        sync: false # any additional preview URLs CORS should allow, comma-separated
+      - key: FACTOR_MESSAGE_API
+        sync: false # leave unset to use the dev OTP stub instead of real SMS
+      - key: REDIS_URL
+        sync: false # optional — omit to run on the in-memory fallback
+      - key: IMAGEKIT_PUBLIC_KEY
+        sync: false
+      - key: IMAGEKIT_PRIVATE_KEY
+        sync: false
+      - key: IMAGEKIT_URL_ENDPOINT
+        sync: false
+      - key: SENTRY_DSN
+        sync: false

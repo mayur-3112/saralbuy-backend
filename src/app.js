@@ -12,6 +12,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import prettyMilliseconds from 'pretty-ms';
 import morganMiddleware from './config/logger.js';
+import requestId from './middleware/requestId.middleware.js';
 import dns from 'dns';
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 const app = express();
@@ -58,6 +59,14 @@ app.use(helmet());
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(requestId);
+app.use((req, res, next) => {
+  // Tags any Sentry event captured during this request with the same
+  // correlation ID as the log line and (if the frontend generated it) the
+  // originating frontend error — no-op if SENTRY_DSN isn't set.
+  Sentry.setTag('request_id', req.id);
+  next();
+});
 app.use(morganMiddleware);
 app.use('/api/v1', router);
 app.use('/api/v1/admin', adminRouter);

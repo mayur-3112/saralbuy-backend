@@ -306,6 +306,8 @@ export const updateProfile = async (req, res) => {
       industriesServed,
       certifications,
       businessSince,
+      businessPhone,
+      storeAddress,
     } = req.body;
 
     const profilePic = req.files?.image?.[0];
@@ -353,6 +355,8 @@ export const updateProfile = async (req, res) => {
     if (industriesServed !== undefined) updates.industriesServed = industriesServed;
     if (certifications !== undefined) updates.certifications = certifications;
     if (businessSince !== undefined) updates.businessSince = businessSince === '' ? null : Number(businessSince);
+    if (businessPhone !== undefined) updates.businessPhone = businessPhone;
+    if (storeAddress !== undefined) updates.storeAddress = storeAddress;
 
     const user = await userSchema
       .findByIdAndUpdate(req.user.userId, { $set: updates }, { new: true })

@@ -64,6 +64,13 @@ const userSchema = new mongoose.Schema(
     // derive years-in-business, so it never goes stale like a raw count would.
     businessSince: { type: Number, default: null },
 
+    // Business-facing contact info, opt-in and separate from the personal
+    // `phone`/`address` fields — a supplier can choose to publish a store
+    // number/location for walk-in buyers without exposing their personal
+    // phone or home address, which stay private until a deal closes.
+    businessPhone: { type: String, default: null, trim: true },
+    storeAddress: { type: String, default: null, trim: true },
+
     // Business verification (post-Aadhaar model).
     // Uppercased on save via pre-hook below.
     gstin: { type: String, default: null, trim: true, uppercase: true },

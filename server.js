@@ -34,7 +34,7 @@ const startServer = async () => {
     }
 
     server = http.createServer(app);
-    initSocket(server);
+    await initSocket(server);
     server.listen(PORT, () => {
       console.log(`Server is listening on ${PORT}`);
     });

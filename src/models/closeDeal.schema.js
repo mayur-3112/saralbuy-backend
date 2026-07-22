@@ -61,4 +61,9 @@ const closedDealSchema = new mongoose.Schema(
 );
 closedDealSchema.index({ productId: 1, buyerId: 1, sellerId: 1 }, { unique: true });
 
+// Serves getUserProfile's anonymity-reveal check, which queries by
+// {buyerId, sellerId, closedDealStatus} in both directions (buyer<->seller)
+// without productId — the unique index above can't be used for that lookup.
+closedDealSchema.index({ buyerId: 1, sellerId: 1, closedDealStatus: 1 });
+
 export default mongoose.model('ClosedDeal', closedDealSchema);

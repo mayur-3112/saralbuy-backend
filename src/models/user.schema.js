@@ -109,6 +109,13 @@ const userSchema = new mongoose.Schema(
 
 userSchema.index({ firstName: 1, lastName: 1, email: 1 });
 userSchema.index({ gstin: 1 }, { sparse: true }); // fast lookup + duplicate-GST detection
+// phone is the OTP-login lookup key — queried on every single send-otp/
+// verify-otp call — and had no index at all (not even non-unique), meaning
+// a full collection scan on the hottest query path in the app. Not marked
+// unique here: that's a data-integrity decision (would need to verify no
+// duplicate phones already exist in production first) separate from this
+// performance fix.
+userSchema.index({ phone: 1 });
 
 // Convenient virtual for frontend: shows a green "Verified Supplier" badge
 // only when the admin has affirmatively approved. Any other state = no badge.

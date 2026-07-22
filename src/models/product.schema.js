@@ -119,5 +119,15 @@ const productSchema = new mongoose.Schema(
 );
 
 productSchema.index({ title: 1 });
+// The "is this RFQ open for quotes" predicate — draft:false, isSoldProduct:
+// false, bidExpiryDate not yet passed — is reconstructed independently
+// across product/requirement controllers (5+ call sites) with no
+// supporting index; equality fields first, range field last per Mongo
+// indexing convention.
+productSchema.index({ draft: 1, isSoldProduct: 1, bidExpiryDate: 1 });
+// Category-filtered browsing/search.
+productSchema.index({ categoryId: 1, draft: 1, isSoldProduct: 1 });
+// A user's own draft listings ("My Requirements > Drafts").
+productSchema.index({ userId: 1, draft: 1 });
 
 export default mongoose.model('Product', productSchema);

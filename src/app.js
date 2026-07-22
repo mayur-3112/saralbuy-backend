@@ -15,29 +15,34 @@ import dns from 'dns';
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 const app = express();
 app.set('trust proxy', 1);
+// Explicit allow-list only — no wildcard subdomain matching. The previous
+// version accepted ANY *.vercel.app / *.netlify.app / *.ngrok-free.app /
+// *.loca.lt origin with credentials:true, meaning anyone could spin up a
+// free deployment on one of those platforms and make authenticated,
+// cookie-carrying requests to this API. CLIENT_URL/ADMIN_URL cover the
+// real deployed frontends; extend EXTRA_ALLOWED_ORIGINS (comma-separated
+// env var) for a specific preview URL when one is genuinely needed for
+// testing — never re-add a suffix/wildcard match here.
+const extraAllowedOrigins = (process.env.EXTRA_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.ADMIN_URL,
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://saralbuy.com',
+  'https://www.saralbuy.com',
+  ...extraAllowedOrigins,
+].filter(Boolean).map(o => o.replace(/\/$/, ''));
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      const allowedOrigins = [
-        process.env.CLIENT_URL,
-        process.env.ADMIN_URL,
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'https://saralbuy.com',
-        'https://www.saralbuy.com',
-      ];
       const normalizedOrigin = origin ? origin.replace(/\/$/, '') : '';
-      if (
-        !origin ||
-        allowedOrigins.some(o => o && o.replace(/\/$/, '') === normalizedOrigin) ||
-        normalizedOrigin.endsWith('.loca.lt') ||
-        normalizedOrigin.endsWith('.ngrok-free.app') ||
-        normalizedOrigin.endsWith('.serveousercontent.com') ||
-        normalizedOrigin.endsWith('.netlify.app') ||
-        normalizedOrigin.includes('netlify.app') ||
-        normalizedOrigin.endsWith('.vercel.app') ||
-        normalizedOrigin.includes('vercel.app')
-      ) {
+      if (!origin || allowedOrigins.includes(normalizedOrigin)) {
         callback(null, true);
       } else {
         console.error('CORS blocked origin:', origin);

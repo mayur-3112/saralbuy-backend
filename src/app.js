@@ -1,4 +1,5 @@
 import './config/env.js';
+import Sentry from './config/sentry.js';
 import express from 'express';
 import router from './routes/index.js';
 import adminRouter from './routes/admin/index.js';
@@ -70,6 +71,11 @@ app.get('/health', (req, res) => {
     timestamp: Date.now(),
   });
 });
+// Must be registered after all routes and before the final error handler —
+// captures any error that reaches this point and forwards it to Sentry
+// (no-op if SENTRY_DSN isn't set, see config/sentry.js).
+Sentry.setupExpressErrorHandler(app);
+
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   return res.status(statusCode).json({

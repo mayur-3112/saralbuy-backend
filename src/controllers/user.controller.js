@@ -303,8 +303,6 @@ export const updateProfile = async (req, res) => {
       businessDescription,
       accomplishments,
       topProblemsSolved,
-      industriesServed,
-      certifications,
       businessSince,
       businessPhone,
       storeAddress,
@@ -352,8 +350,6 @@ export const updateProfile = async (req, res) => {
     if (businessDescription !== undefined) updates.businessDescription = businessDescription;
     if (accomplishments !== undefined) updates.accomplishments = accomplishments;
     if (topProblemsSolved !== undefined) updates.topProblemsSolved = topProblemsSolved;
-    if (industriesServed !== undefined) updates.industriesServed = industriesServed;
-    if (certifications !== undefined) updates.certifications = certifications;
     if (businessSince !== undefined) updates.businessSince = businessSince === '' ? null : Number(businessSince);
     if (businessPhone !== undefined) updates.businessPhone = businessPhone;
     if (storeAddress !== undefined) updates.storeAddress = storeAddress;

@@ -58,8 +58,6 @@ const userSchema = new mongoose.Schema(
     businessDescription: { type: String, default: null },
     accomplishments: { type: String, default: null },
     topProblemsSolved: { type: String, default: null },
-    industriesServed: { type: String, default: null },
-    certifications: { type: String, default: null },
     // Founding year — displayed profile-side as "since <year>" and used to
     // derive years-in-business, so it never goes stale like a raw count would.
     businessSince: { type: Number, default: null },

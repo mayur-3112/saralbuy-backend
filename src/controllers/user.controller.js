@@ -5,6 +5,7 @@ import uploadFile from '../config/imageKit.config.js';
 import { authCookieOptions } from '../utils/cookieOptions.js';
 import redisHelper from '../helpers/redisHelper.js';
 import closeDealSchema from '../models/closeDeal.schema.js';
+import { resilientFetch } from '../utils/resilientCall.js';
 
 const otpStore = new Map();
 
@@ -102,7 +103,7 @@ export const factorSendOtp = async (req, res) => {
         console.log('Sending OTP to:', pNo);
         console.log('API URL:', apiUrl);
 
-        const response = await fetch(apiUrl);
+        const response = await resilientFetch(apiUrl);
         const data = await response.json();
         console.log('OTP response:', data);
 
@@ -187,7 +188,7 @@ export const factorVerifyOtp = async (req, res) => {
 
     const apiUrl = `https://2factor.in/API/V1/${apiKey}/SMS/VERIFY/${sessionId}/${otp}`;
 
-    const response = await fetch(apiUrl, {
+    const response = await resilientFetch(apiUrl, {
       method: 'GET',
     });
 

@@ -1,5 +1,6 @@
 import ImageKit from '@imagekit/nodejs';
 import FileUpload from '../models/fileUpload.schema.js';
+import { withTimeout } from '../utils/resilientCall.js';
 
 const DUMMY_KEYS = ['your_public_key', 'dummy_public_key', 'dummy_private_key', ''];
 
@@ -41,11 +42,15 @@ const uploadFile = async file => {
     }
 
     const activeClient = getClient();
-    const result = await activeClient.files.upload({
-      file: file.buffer.toString('base64'),
-      fileName: file.originalname,
-      folder: 'images',
-    });
+    const result = await withTimeout(
+      activeClient.files.upload({
+        file: file.buffer.toString('base64'),
+        fileName: file.originalname,
+        folder: 'images',
+      }),
+      15000,
+      'ImageKit upload timed out'
+    );
     return result.url;
   } catch (err) {
     console.error('ImageKit upload failed, falling back to null URL:', err.message);

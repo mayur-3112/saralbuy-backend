@@ -3,6 +3,7 @@ import { ApiResponse } from '../../helpers/ApiReponse.js';
 import redisHelper from '../../helpers/redisHelper.js';
 import userSchema from '../../models/user.schema.js';
 import { authCookieOptions } from '../../utils/cookieOptions.js';
+import { applyVerificationDecision } from '../../services/verificationDecision.service.js';
 
 export const login = async (req, res) => {
   const { email, password } = req.body;
@@ -255,43 +256,18 @@ export const decideVerification = async (req, res) => {
   try {
     const { userId } = req.params;
     const { decision, notes } = req.body;
+    // This route's own body shape is {decision: 'approve'|'reject'} — map it
+    // onto the shared service's canonical target-status vocabulary.
+    const targetStatus = decision === 'approve' ? 'verified' : decision === 'reject' ? 'rejected' : decision;
 
-    if (!isValidObjectId(userId)) {
-      return ApiResponse.errorResponse(res, 400, 'Invalid user ID');
-    }
-    if (!['approve', 'reject'].includes(decision)) {
-      return ApiResponse.errorResponse(res, 400, "decision must be 'approve' or 'reject'");
-    }
-    if (decision === 'reject' && (!notes || !notes.trim())) {
-      return ApiResponse.errorResponse(res, 400, 'Reject decisions must include a reason in notes');
-    }
-
-    const user = await userSchema.findById(userId);
-    if (!user) return ApiResponse.errorResponse(res, 404, 'User not found');
-    if (user.verificationStatus !== 'pending') {
-      return ApiResponse.errorResponse(res, 400, `Cannot decide — current status is '${user.verificationStatus}'`);
-    }
-
-    user.verificationStatus = decision === 'approve' ? 'verified' : 'rejected';
-    user.verificationDecidedAt = new Date();
-    user.verificationDecidedBy = req.user.userId || req.user._id;
-    user.verificationMethod = 'manual_admin';
-    if (notes) user.verificationNotes = notes.trim();
-
-    await user.save();
-
-    return ApiResponse.successResponse(
-      res,
-      200,
-      `Verification ${decision === 'approve' ? 'approved' : 'rejected'}`,
-      {
-        _id: user._id,
-        verificationStatus: user.verificationStatus,
-        verificationDecidedAt: user.verificationDecidedAt,
-        verificationNotes: user.verificationNotes,
-      }
-    );
+    const result = await applyVerificationDecision({
+      userId,
+      targetStatus,
+      notes,
+      decidedBy: req.user.userId || req.user._id,
+    });
+    return ApiResponse.successResponse(res, result.statusCode, result.message, result.data);
   } catch (error) {
-    return ApiResponse.errorResponse(res, 500, error.message);
+    return ApiResponse.errorResponse(res, error.statusCode || 500, error.message);
   }
 };

@@ -1,5 +1,6 @@
 import { ApiResponse } from '../../helpers/ApiReponse.js';
 import userSchema from '../../models/user.schema.js';
+import { applyVerificationDecision } from '../../services/verificationDecision.service.js';
 
 export const adminGetVerificationQueue = async (req, res) => {
   try {
@@ -67,23 +68,21 @@ export const adminDecideVerification = async (req, res) => {
   try {
     const { id } = req.params;
     const { verificationStatus, verificationNotes } = req.body;
-    const allowed = ['verified', 'rejected', 'pending'];
-    if (!allowed.includes(verificationStatus)) {
-      return ApiResponse.errorResponse(res, 400, 'Invalid verification status');
-    }
-    const update = {
-      verificationStatus,
-      verificationNotes: verificationNotes || null,
-      verificationDecidedAt: new Date(),
-      verificationDecidedBy: req.admin?._id || null,
-      verificationMethod: 'manual_admin',
-    };
-    const user = await userSchema.findByIdAndUpdate(id, update, { new: true }).select(
-      'firstName lastName verificationStatus verificationNotes verificationDecidedAt'
-    );
-    if (!user) return ApiResponse.errorResponse(res, 404, 'User not found');
-    return ApiResponse.successResponse(res, 200, 'Verification decision saved', user);
+
+    // req.admin was never set by adminAuth middleware (it sets req.user) —
+    // verificationDecidedBy was silently always null through this endpoint.
+    const result = await applyVerificationDecision({
+      userId: id,
+      targetStatus: verificationStatus,
+      notes: verificationNotes,
+      decidedBy: req.user?.userId || req.user?._id,
+    });
+
+    const user = await userSchema
+      .findById(id)
+      .select('firstName lastName verificationStatus verificationNotes verificationDecidedAt');
+    return ApiResponse.successResponse(res, result.statusCode, result.message, user);
   } catch (error) {
-    return ApiResponse.errorResponse(res, 500, 'Error updating verification');
+    return ApiResponse.errorResponse(res, error.statusCode || 500, error.message || 'Error updating verification');
   }
 };

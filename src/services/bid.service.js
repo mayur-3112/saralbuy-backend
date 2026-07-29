@@ -168,119 +168,131 @@ export async function updateBidUserDetails({ id, userId, budgetQuation, availabl
 }
 
 export async function createBid({ body, file, buyerId, productId, sellerId }) {
+  const {
+    budgetQuation, status, availableBrand, earliestDeliveryDate, businessType,
+    sellerType, priceBasis, taxes, freightTerms, paymentTerms, location, buyerNote,
+  } = body;
+
+  // When submitted as multipart (document-upload quote flow), objects arrive
+  // as JSON strings and the quotation file arrives on req.file.
+  let businessDets = body.businessDets;
+  if (typeof businessDets === 'string') {
+    try {
+      businessDets = JSON.parse(businessDets);
+    } catch {
+      businessDets = undefined;
+    }
+  }
+
+  // Uploaded BEFORE the transaction starts, not inside it: session.withTransaction
+  // (below) may retry its callback on a transient error, and an external I/O
+  // call like this must never be retried as a side effect of a DB-layer retry
+  // (it would upload the file more than once).
+  let quoteDocument = '';
+  if (file) {
+    quoteDocument = (await uploadFile(file)) || '';
+  }
+
+  if (!isValidObjectId(buyerId) || !isValidObjectId(productId)) {
+    throw new BidServiceError(400, 'Invalid sellerId or productId');
+  }
+  if (!budgetQuation) {
+    throw new BidServiceError(400, 'budgetQuation is required');
+  }
+
   const session = await mongoose.startSession();
+  let createdBid, updatedProduct, updatedRequirement;
   try {
-    session.startTransaction();
-
-    const {
-      budgetQuation, status, availableBrand, earliestDeliveryDate, businessType,
-      sellerType, priceBasis, taxes, freightTerms, paymentTerms, location, buyerNote,
-    } = body;
-
-    // When submitted as multipart (document-upload quote flow), objects arrive
-    // as JSON strings and the quotation file arrives on req.file.
-    let businessDets = body.businessDets;
-    if (typeof businessDets === 'string') {
-      try {
-        businessDets = JSON.parse(businessDets);
-      } catch {
-        businessDets = undefined;
+    // session.withTransaction (not manual startTransaction/commitTransaction)
+    // automatically retries the callback on a TransientTransactionError and
+    // retries the commit on UnknownTransactionCommitResult, per MongoDB's own
+    // documented pattern — manual transaction handling had no retry at all.
+    await session.withTransaction(async () => {
+      // Prevent a buyer from quoting on their own requirement (market manipulation)
+      const productOwner = await productSchema
+        .findById(productId)
+        .select('userId isSoldProduct')
+        .session(session);
+      if (!productOwner) {
+        throw new BidServiceError(400, 'Product not found');
       }
-    }
+      if (productOwner.userId.toString() === sellerId.toString()) {
+        throw new BidServiceError(400, 'You cannot submit a quote on your own requirement');
+      }
+      if (productOwner.isSoldProduct) {
+        throw new BidServiceError(400, 'This product is already sold');
+      }
 
-    let quoteDocument = '';
-    if (file) {
-      quoteDocument = (await uploadFile(file)) || '';
-    }
+      const existingBid = await bidSchema.findOne({ sellerId, buyerId, productId }, null, { session });
+      if (existingBid) {
+        throw new BidServiceError(400, 'You have already placed a bid for this product');
+      }
 
-    if (!isValidObjectId(buyerId) || !isValidObjectId(productId)) {
-      throw new BidServiceError(400, 'Invalid sellerId or productId');
-    }
-    if (!budgetQuation) {
-      throw new BidServiceError(400, 'budgetQuation is required');
-    }
+      const isSold = await closeDealSchema
+        .exists({ productId, closedDealStatus: 'completed', dealStatus: 'accepted' })
+        .session(session);
+      if (isSold?._id) {
+        throw new BidServiceError(400, 'This product is already sold');
+      }
 
-    // Prevent a buyer from quoting on their own requirement (market manipulation)
-    const productOwner = await productSchema
-      .findById(productId)
-      .select('userId isSoldProduct')
-      .session(session);
-    if (!productOwner) {
-      throw new BidServiceError(400, 'Product not found');
-    }
-    if (productOwner.userId.toString() === sellerId.toString()) {
-      throw new BidServiceError(400, 'You cannot submit a quote on your own requirement');
-    }
-    if (productOwner.isSoldProduct) {
-      throw new BidServiceError(400, 'This product is already sold');
-    }
+      const sellerExists = await requirementSchema.findOne(
+        { productId, buyerId, 'sellers.sellerId': sellerId },
+        null,
+        { session }
+      );
+      if (sellerExists) {
+        throw new BidServiceError(400, 'You already placed bid in requirement');
+      }
 
-    const existingBid = await bidSchema.findOne({ sellerId, buyerId, productId }, null, { session });
-    if (existingBid) {
-      throw new BidServiceError(400, 'You have already placed a bid for this product');
-    }
+      const bid = await bidSchema.create(
+        [
+          {
+            sellerId, buyerId, productId, budgetQuation,
+            status: status || 'active',
+            availableBrand, earliestDeliveryDate, sellerType, priceBasis, taxes,
+            freightTerms, paymentTerms, location, buyerNote, quoteDocument, businessType,
+            ...(businessType === 'business' && { businessDets }),
+          },
+        ],
+        { session }
+      );
 
-    const isSold = await closeDealSchema
-      .exists({ productId, closedDealStatus: 'completed', dealStatus: 'accepted' })
-      .session(session);
-    if (isSold?._id) {
-      throw new BidServiceError(400, 'This product is already sold');
-    }
+      createdBid = bid[0];
 
-    const sellerExists = await requirementSchema.findOne(
-      { productId, buyerId, 'sellers.sellerId': sellerId },
-      null,
-      { session }
-    );
-    if (sellerExists) {
-      throw new BidServiceError(400, 'You already placed bid in requirement');
-    }
+      updatedProduct = await productSchema.findByIdAndUpdate(
+        productId,
+        { $inc: { totalBidCount: 1 } },
+        { new: true, session }
+      );
 
-    const bid = await bidSchema.create(
-      [
-        {
-          sellerId, buyerId, productId, budgetQuation,
-          status: status || 'active',
-          availableBrand, earliestDeliveryDate, sellerType, priceBasis, taxes,
-          freightTerms, paymentTerms, location, buyerNote, quoteDocument, businessType,
-          ...(businessType === 'business' && { businessDets }),
-        },
-      ],
-      { session }
-    );
+      const requirement = await requirementSchema.findOne({ productId, buyerId }, null, { session });
+      if (!requirement) {
+        throw new BidServiceError(404, 'Requirement not found for this product and buyer');
+      }
+      updatedRequirement = await requirementSchema.findOneAndUpdate(
+        { productId, buyerId },
+        { $push: { sellers: { sellerId, budgetAmount: budgetQuation, bidId: createdBid._id } } },
+        { new: true, session }
+      );
+      if (!updatedRequirement) {
+        throw new BidServiceError(400, 'Requirement not found for this product and buyer');
+      }
 
-    const createdBid = bid[0];
-
-    const updatedProduct = await productSchema.findByIdAndUpdate(
-      productId,
-      { $inc: { totalBidCount: 1 } },
-      { new: true, session }
-    );
-
-    const requirement = await requirementSchema.findOne({ productId, buyerId }, null, { session });
-    if (!requirement) {
-      throw new BidServiceError(404, 'Requirement not found for this product and buyer');
-    }
-    const updatedRequirement = await requirementSchema.findOneAndUpdate(
-      { productId, buyerId },
-      { $push: { sellers: { sellerId, budgetAmount: budgetQuation, bidId: createdBid._id } } },
-      { new: true, session }
-    );
-    if (!updatedRequirement) {
-      throw new BidServiceError(400, 'Requirement not found for this product and buyer');
-    }
-
-    await cartSchema.findOneAndUpdate(
-      { userId: sellerId },
-      { $pull: { cartItems: { productIds: { $in: [productId] } } } },
-      { session }
-    );
-
-    await session.commitTransaction();
+      await cartSchema.findOneAndUpdate(
+        { userId: sellerId },
+        { $pull: { cartItems: { productIds: { $in: [productId] } } } },
+        { session }
+      );
+    });
+  } catch (err) {
+    if (err instanceof BidServiceError) throw err;
+    throw new BidServiceError(400, err.message || 'Transaction failed');
+  } finally {
     session.endSession();
+  }
 
-    // Populate response (outside transaction)
-    const [sellerDetails, buyerDetails, productDetails] = await Promise.all([
+  // Populate response (outside transaction)
+  const [sellerDetails, buyerDetails, productDetails] = await Promise.all([
       userSchema.findById(sellerId).select('-password -__v').lean().then(decryptUserGstPan),
       userSchema.findById(buyerId).select('-password -__v').lean().then(decryptUserGstPan),
       productSchema.findById(productId).select('title images categoryId').lean(),
@@ -343,14 +355,6 @@ export async function createBid({ body, file, buyerId, productId, sellerId }) {
         requirementId: updatedRequirement?._id,
       },
     };
-  } catch (err) {
-    if (session.inTransaction()) {
-      await session.abortTransaction();
-    }
-    session.endSession();
-    if (err instanceof BidServiceError) throw err;
-    throw new BidServiceError(400, err.message || 'Transaction failed');
-  }
 }
 
 export async function getAllBids({ userId, search = '', limit = 10, page = 1, sortBy = 'desc' }) {
@@ -550,32 +554,30 @@ export async function getBidByProductId({ productId }) {
 export async function deleteBid({ id, sellerId }) {
   const session = await mongoose.startSession();
   try {
-    session.startTransaction();
-    const bid = await bidSchema.findOne({ _id: id, sellerId }).session(session);
-    if (!bid) throw new BidServiceError(403, 'Not authorized to delete this bid');
+    // session.withTransaction auto-retries on TransientTransactionError,
+    // matching createBid/updateQuoteStatus (see createBid's comment for why).
+    await session.withTransaction(async () => {
+      const bid = await bidSchema.findOne({ _id: id, sellerId }).session(session);
+      if (!bid) throw new BidServiceError(403, 'Not authorized to delete this bid');
 
-    await requirementSchema.findOneAndUpdate(
-      { productId: bid.productId },
-      { $pull: { sellers: { sellerId: bid.sellerId || sellerId } } },
-      { session }
-    );
+      await requirementSchema.findOneAndUpdate(
+        { productId: bid.productId },
+        { $pull: { sellers: { sellerId: bid.sellerId || sellerId } } },
+        { session }
+      );
 
-    await bidSchema.deleteOne({ _id: id }).session(session);
+      await bidSchema.deleteOne({ _id: id }).session(session);
 
-    if (bid.productId) {
-      await productSchema.findByIdAndUpdate(bid.productId, { $inc: { totalBidCount: -1 } }, { session });
-    }
-
-    await session.commitTransaction();
-    session.endSession();
+      if (bid.productId) {
+        await productSchema.findByIdAndUpdate(bid.productId, { $inc: { totalBidCount: -1 } }, { session });
+      }
+    });
     return { statusCode: 200, message: 'Bid deleted successfully', data: null };
   } catch (err) {
-    if (session.inTransaction()) {
-      await session.abortTransaction();
-    }
-    session.endSession();
     if (err instanceof BidServiceError) throw err;
     throw new BidServiceError(400, err.message || 'Something went wrong while deleting bid');
+  } finally {
+    session.endSession();
   }
 }
 
@@ -732,103 +734,131 @@ export async function getBidActivityByProduct({ productId }) {
   };
 }
 
+// M3.T4 (Implementation Master Plan) — the quote-status field previously
+// accepted any target value from any current state: an already-'accepted'
+// bid (whose acceptance already triggered auto-rejecting every competing
+// bid on the product, below) could be silently flipped to 'rejected' or
+// back to 'shortlisted' with no guard at all, and 'rejected' had no
+// terminal-state protection either. A real, if small, state machine now
+// enforces the actual business rules — same pattern already established in
+// verificationDecision.service.js for admin verification decisions.
+//   pending     -> shortlisted | accepted | rejected
+//   shortlisted -> accepted | rejected
+//   accepted    -> (terminal — a deal is already effectively made)
+//   rejected    -> (terminal)
+const QUOTE_STATUS_TRANSITIONS = {
+  pending: ['shortlisted', 'accepted', 'rejected'],
+  shortlisted: ['accepted', 'rejected'],
+  accepted: [],
+  rejected: [],
+};
+
 export async function updateQuoteStatus({ bidId, quoteStatus, userId }) {
+  if (!['shortlisted', 'accepted', 'rejected'].includes(quoteStatus)) {
+    throw new BidServiceError(400, 'Invalid quote status');
+  }
+
   const session = await mongoose.startSession();
+  let resultBid;
   try {
-    session.startTransaction();
+    // session.withTransaction auto-retries on TransientTransactionError,
+    // matching createBid/deleteBid (see createBid's comment for why).
+    await session.withTransaction(async () => {
+      const bid = await bidSchema.findById(bidId).session(session);
+      if (!bid) throw new BidServiceError(404, 'Bid not found');
 
-    if (!['shortlisted', 'accepted', 'rejected'].includes(quoteStatus)) {
-      throw new BidServiceError(400, 'Invalid quote status');
-    }
-
-    const bid = await bidSchema.findById(bidId).session(session);
-    if (!bid) throw new BidServiceError(404, 'Bid not found');
-
-    // Only the buyer can update the quote status!
-    if (bid.buyerId.toString() !== userId.toString()) {
-      throw new BidServiceError(403, 'Not authorized to update this bid status');
-    }
-
-    bid.quoteStatus = quoteStatus;
-    await bid.save({ session });
-
-    // If accepted, we auto-reject other bids for this product
-    if (quoteStatus === 'accepted') {
-      await bidSchema.updateMany(
-        { productId: bid.productId, _id: { $ne: bidId } },
-        { $set: { quoteStatus: 'rejected' } },
-        { session }
-      );
-    }
-
-    // Notify the Seller!
-    try {
-      const productDetails = await productSchema.findById(bid.productId).select('title').session(session);
-      let title = '';
-      let description = '';
-      if (quoteStatus === 'shortlisted') {
-        title = 'Quote Shortlisted!';
-        description = `Your quote for "${productDetails.title}" has been shortlisted by the buyer.`;
-      } else if (quoteStatus === 'accepted') {
-        title = 'Quote Accepted!';
-        description = `Congratulations! Your quote for "${productDetails.title}" was accepted.`;
-      } else if (quoteStatus === 'rejected') {
-        title = 'Quote Rejected';
-        description = `Unfortunately, your quote for "${productDetails.title}" was rejected.`;
+      // Only the buyer can update the quote status!
+      if (bid.buyerId.toString() !== userId.toString()) {
+        throw new BidServiceError(403, 'Not authorized to update this bid status');
       }
 
-      if (title) {
-        const notif = await productNotificaitonSchema.create(
-          [
-            {
-              recipientId: bid.sellerId,
-              senderId: userId,
-              productId: bid.productId,
-              type: 'quote_status_update',
-              title,
-              description,
-              roomId: null,
-              metadata: {
-                quoteStatus,
-                bidId: bid._id.toString(),
-                productId: bid.productId.toString(),
-                buyerId: bid.buyerId.toString(),
-              },
-            },
-          ],
+      const currentStatus = bid.quoteStatus || 'pending';
+      const allowedTargets = QUOTE_STATUS_TRANSITIONS[currentStatus] || [];
+      if (!allowedTargets.includes(quoteStatus)) {
+        throw new BidServiceError(
+          400,
+          `Cannot change status from '${currentStatus}' to '${quoteStatus}' — this quote is already ${currentStatus}.`
+        );
+      }
+
+      bid.quoteStatus = quoteStatus;
+      await bid.save({ session });
+
+      // If accepted, we auto-reject other bids for this product
+      if (quoteStatus === 'accepted') {
+        await bidSchema.updateMany(
+          { productId: bid.productId, _id: { $ne: bidId } },
+          { $set: { quoteStatus: 'rejected' } },
           { session }
         );
-
-        const io = getIO();
-        const sellerSocketId = onlineUsers.get(bid.sellerId.toString());
-        if (io && sellerSocketId) {
-          io.to(sellerSocketId).emit(SOCKET_EVENTS.NOTIFICATION_NEW, {
-            _id: notif[0]._id.toString(),
-            type: notif[0].type,
-            title: notif[0].title,
-            description: notif[0].description,
-            seen: false,
-            roomId: null,
-            dealId: null,
-            createdAt: notif[0].createdAt,
-            metadata: notif[0].metadata,
-          });
-        }
       }
-    } catch (notifErr) {
-      console.error('Bid notification error:', notifErr);
-    }
 
-    await session.commitTransaction();
-    session.endSession();
+      // Notify the Seller!
+      try {
+        const productDetails = await productSchema.findById(bid.productId).select('title').session(session);
+        let title = '';
+        let description = '';
+        if (quoteStatus === 'shortlisted') {
+          title = 'Quote Shortlisted!';
+          description = `Your quote for "${productDetails.title}" has been shortlisted by the buyer.`;
+        } else if (quoteStatus === 'accepted') {
+          title = 'Quote Accepted!';
+          description = `Congratulations! Your quote for "${productDetails.title}" was accepted.`;
+        } else if (quoteStatus === 'rejected') {
+          title = 'Quote Rejected';
+          description = `Unfortunately, your quote for "${productDetails.title}" was rejected.`;
+        }
 
-    return { statusCode: 200, message: `Bid marked as ${quoteStatus} successfully`, data: bid };
+        if (title) {
+          const notif = await productNotificaitonSchema.create(
+            [
+              {
+                recipientId: bid.sellerId,
+                senderId: userId,
+                productId: bid.productId,
+                type: 'quote_status_update',
+                title,
+                description,
+                roomId: null,
+                metadata: {
+                  quoteStatus,
+                  bidId: bid._id.toString(),
+                  productId: bid.productId.toString(),
+                  buyerId: bid.buyerId.toString(),
+                },
+              },
+            ],
+            { session }
+          );
+
+          const io = getIO();
+          const sellerSocketId = onlineUsers.get(bid.sellerId.toString());
+          if (io && sellerSocketId) {
+            io.to(sellerSocketId).emit(SOCKET_EVENTS.NOTIFICATION_NEW, {
+              _id: notif[0]._id.toString(),
+              type: notif[0].type,
+              title: notif[0].title,
+              description: notif[0].description,
+              seen: false,
+              roomId: null,
+              dealId: null,
+              createdAt: notif[0].createdAt,
+              metadata: notif[0].metadata,
+            });
+          }
+        }
+      } catch (notifErr) {
+        console.error('Bid notification error:', notifErr);
+      }
+
+      resultBid = bid;
+    });
+
+    return { statusCode: 200, message: `Bid marked as ${quoteStatus} successfully`, data: resultBid };
   } catch (err) {
-    if (session.inTransaction()) {
-      await session.abortTransaction();
-    }
-    session.endSession();
     if (err instanceof BidServiceError) throw err;
     throw new BidServiceError(500, err.message || 'Something went wrong while updating quote status');
+  } finally {
+    session.endSession();
   }
 }

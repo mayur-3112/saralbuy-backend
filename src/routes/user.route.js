@@ -4,6 +4,8 @@ import auth from '../middleware/auth.middleware.js';
 import uploadFile from '../config/imageKit.config.js';
 import { allowUploadFields } from '../utils/multer.js';
 import { sendOtpLimiter, verifyOtpLimiter } from '../middleware/otpRateLimit.middleware.js';
+import { validateBody } from '../middleware/validate.middleware.js';
+import { updateProfileSchema } from '../validations/updateProfile.schema.js';
 const otpController =
   process.env.NODE_ENV === 'development' ? userController.sendOtp : userController.factorSendOtp;
 const verifyController =
@@ -17,7 +19,13 @@ router.get('/logout', auth, userController.logout);
 router.post('/request-deletion', auth, userController.requestAccountDeletion);
 router.get('/profile', auth, userController.getProfile);
 router.get('/user-profile', auth, userController.getUserProfile);
-router.post('/update-profile', auth, allowUploadFields(), userController.updateProfile);
+router.post(
+  '/update-profile',
+  auth,
+  allowUploadFields(),
+  validateBody(updateProfileSchema),
+  userController.updateProfile
+);
 
 // Business verification (GSTIN/PAN) — supplier trust replacement for Aadhaar
 router.post(

@@ -1,6 +1,8 @@
 import express from 'express';
 import auth from '../middleware/auth.middleware.js';
 import { allowUploadFields } from '../utils/multer.js';
+import { validateBody } from '../middleware/validate.middleware.js';
+import { addProductSchema } from '../validations/addProduct.schema.js';
 import {
   addProduct,
   addMultipleProducts,
@@ -21,7 +23,13 @@ import {
 } from '../controllers/product.controller.js';
 const router = express.Router();
 
-router.post('/add-product/:categoryId/:subCategoryId', auth, allowUploadFields(), addProduct);
+router.post(
+  '/add-product/:categoryId/:subCategoryId',
+  auth,
+  allowUploadFields(),
+  validateBody(addProductSchema),
+  addProduct
+);
 router.post('/create-multiple', auth, addMultipleProducts);
 router.post('/upload-multiple-requirement', auth, allowUploadFields(), uploadMultipleRequirements);
 router.get('/get-trending-category', getTrendingCategory);

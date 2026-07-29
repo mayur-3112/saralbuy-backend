@@ -1,6 +1,7 @@
 import './config/env.js';
 import Sentry from './config/sentry.js';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import router from './routes/index.js';
 import adminRouter from './routes/admin/index.js';
 import fileRoute from './routes/file.route.js';
@@ -60,6 +61,20 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(requestId);
+// General-purpose ceiling on every route, IP-keyed. Generous enough not to
+// bother real traffic — this is a backstop against scraping/DoS, not a
+// per-feature control. Routes with a tighter, purpose-specific limiter
+// (OTP send/verify, admin login — see otpRateLimit.middleware.js) still run
+// their own limiter on top of this one; the two layer, they don't conflict.
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Too many requests. Please try again later.' },
+  })
+);
 app.use((req, res, next) => {
   // Tags any Sentry event captured during this request with the same
   // correlation ID as the log line and (if the frontend generated it) the

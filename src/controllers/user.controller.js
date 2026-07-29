@@ -6,6 +6,7 @@ import { authCookieOptions } from '../utils/cookieOptions.js';
 import redisHelper from '../helpers/redisHelper.js';
 import closeDealSchema from '../models/closeDeal.schema.js';
 import { resilientFetch } from '../utils/resilientCall.js';
+import { encryptField } from '../utils/fieldEncryption.js';
 
 const otpStore = new Map();
 
@@ -125,11 +126,24 @@ export const factorSendOtp = async (req, res) => {
     }
 
     if (useFallback) {
+      // Never silently grant login access in real production — a fixed or
+      // silently-issued OTP here would let anyone log in as any phone number
+      // during an SMS-provider outage. Only non-production environments
+      // (local/staging without a real API key) may use this fallback.
+      if (process.env.NODE_ENV === 'production') {
+        console.error(`[OTP] 2Factor unavailable for ${pNo}, refusing to fall back in production. Reason: ${fallbackDetails}`);
+        return ApiResponse.errorResponse(
+          res,
+          503,
+          'SMS provider is temporarily unavailable. Please try again shortly.'
+        );
+      }
+
       const dummySessionId = `dummy-session-${pNo}-${Date.now()}`;
-      const mockOtp = '123456';
+      const mockOtp = Math.floor(1_00_000 + Math.random() * 9_00_000).toString();
       const expiresAt = Date.now() + 5 * 60 * 1000;
       otpStore.set(dummySessionId, { otp: mockOtp, expiresAt });
-      console.log(`[FALLBACK] OTP for ${pNo} is mock: ${mockOtp} (Session: ${dummySessionId}) Reason: ${fallbackDetails}`);
+      console.log(`[FALLBACK] OTP for ${pNo}: ${mockOtp} (Session: ${dummySessionId}) Reason: ${fallbackDetails}`);
 
       return ApiResponse.successResponse(res, 200, 'OTP sent successfully', {
         sessionId: dummySessionId,
@@ -364,6 +378,42 @@ export const updateProfile = async (req, res) => {
     return ApiResponse.errorResponse(res, 500, err.message, null);
   }
 };
+// Self-service data-erasure request (DPDP Act / Privacy Policy §7). Marks the
+// account inactive immediately (blocks re-login via the existing 'inactive'
+// status check in factorSendOtp) and timestamps the request for an admin to
+// fulfill via anonymizeUser. Does not hard-delete: see the schema comment on
+// deletionRequestedAt for why anonymization is the safe pattern here.
+export const requestAccountDeletion = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?._id;
+    if (!userId) return ApiResponse.errorResponse(res, 401, 'Not authenticated');
+
+    const user = await userSchema.findById(userId);
+    if (!user) return ApiResponse.errorResponse(res, 404, 'User not found');
+
+    if (user.deletionRequestedAt) {
+      return ApiResponse.successResponse(res, 200, 'Deletion already requested', {
+        deletionRequestedAt: user.deletionRequestedAt,
+      });
+    }
+
+    user.deletionRequestedAt = new Date();
+    user.status = 'inactive';
+    await user.save();
+
+    const { maxAge, ...clearOptions } = authCookieOptions;
+    res.clearCookie('authToken', clearOptions);
+    await redisHelper.del(`user_${user._id}`);
+
+    return ApiResponse.successResponse(res, 200, 'Deletion request received. Your account is deactivated and will be processed.', {
+      deletionRequestedAt: user.deletionRequestedAt,
+    });
+  } catch (err) {
+    console.error('requestAccountDeletion error:', err);
+    return ApiResponse.errorResponse(res, 500, err.message || 'Failed to submit deletion request');
+  }
+};
+
 export const logout = (req, res) => {
   const user = req.user;
   if (!user) return ApiResponse.errorResponse(res, 401, 'User not logged in');
@@ -406,8 +456,13 @@ export const submitVerification = async (req, res) => {
     // user. Prevents a scammer registering the same real business under two accounts.
     if (gstin) {
       const gstinNorm = gstin.trim().toUpperCase();
+      // gstin is stored encrypted (see user.schema.js) — the encryption is
+      // deterministic specifically so this exact-match lookup keeps working,
+      // but the query value must be encrypted explicitly here rather than
+      // relying on Mongoose to run the schema's custom setter during query
+      // casting, which isn't guaranteed behavior to depend on.
       const existing = await userSchema.findOne({
-        gstin: gstinNorm,
+        gstin: encryptField(gstinNorm),
         verificationStatus: 'verified',
         _id: { $ne: userId },
       }).select('_id');
@@ -421,10 +476,10 @@ export const submitVerification = async (req, res) => {
 
     // Handle uploaded docs
     if (req.files?.gstinDocument?.[0]) {
-      user.gstinDocumentUrl = await uploadFile(req.files.gstinDocument[0]);
+      user.gstinDocumentUrl = await uploadFile(req.files.gstinDocument[0], { uploadedBy: userId, category: 'kyc' });
     }
     if (req.files?.panDocument?.[0]) {
-      user.panDocumentUrl = await uploadFile(req.files.panDocument[0]);
+      user.panDocumentUrl = await uploadFile(req.files.panDocument[0], { uploadedBy: userId, category: 'kyc' });
     }
 
     user.verificationStatus = 'pending';

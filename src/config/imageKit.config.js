@@ -27,7 +27,11 @@ const getClient = () => {
   return client;
 };
 
-const uploadFile = async file => {
+// `meta` is optional and additive — existing call sites that don't pass it
+// keep working exactly as before. Only set it (uploadedBy + category: 'kyc')
+// for sensitive uploads that need an owner-only retrieval check; everything
+// else stays "any authenticated user can view", same as today.
+const uploadFile = async (file, meta = {}) => {
   try {
     // Fallback to MongoDB storage when ImageKit is not configured
     if (!isImageKitConfigured()) {
@@ -36,6 +40,8 @@ const uploadFile = async file => {
         contentType: file.mimetype,
         filename: file.originalname,
         size: file.size,
+        uploadedBy: meta.uploadedBy,
+        category: meta.category,
       });
       const baseUrl = process.env.BACKEND_URL || 'https://saralbuy-backend-2ndv.onrender.com';
       return `${baseUrl}/api/v1/files/${doc._id}`;

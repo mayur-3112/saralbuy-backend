@@ -97,6 +97,30 @@ const bidSchema = new mongoose.Schema(
       company_reg_num: { type: String, default: '' },
       gst_num: { type: String, default: '' },
     },
+
+    // Per-material quote lines, mirroring Product.items[] on the requirement
+    // being quoted. Optional/empty on older bids and on single-item or
+    // document-upload RFQs where there's nothing to break down — budgetQuation
+    // remains the source of truth for the total either way. Added so a quote
+    // on a multi-material RFQ can carry a real per-item breakdown instead of
+    // collapsing into one lump sum (previously computed client-side and
+    // discarded before reaching the server).
+    items: [
+      {
+        // References the specific Product.items[]._id this line responds to.
+        // Not `required` -- a bid on a single-item (non-multiple) Product has
+        // no productItemId to point at, since that Product has no items[].
+        productItemId: { type: mongoose.Schema.Types.ObjectId },
+        offeredBrand: { type: String, default: '' },
+        unitPrice: { type: Number },
+        availability: {
+          type: String,
+          enum: ['in_stock', 'lead_time', 'unavailable'],
+          default: 'in_stock',
+        },
+        remarks: { type: String, default: '' },
+      },
+    ],
   },
   { timestamps: true }
 );

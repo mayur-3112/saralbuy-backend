@@ -28,8 +28,14 @@ describe('M3.T3 Zod schemas (validation-only, req.body untouched on success)', (
       const result = createBidSchema.safeParse({ budgetQuation: '5000' });
       expect(result.success).toBe(true);
     });
-    it('rejects a missing budgetQuation', () => {
-      expect(createBidSchema.safeParse({}).success).toBe(false);
+    it('accepts a missing budgetQuation at the Zod layer -- items[] can supply it instead; the service enforces that one of the two is present', () => {
+      expect(createBidSchema.safeParse({}).success).toBe(true);
+    });
+    it('accepts an items array (deep validation happens in bid.service.js against the real Product.items[])', () => {
+      const result = createBidSchema.safeParse({
+        items: JSON.stringify([{ productItemId: '507f1f77bcf86cd799439011', unitPrice: '500' }]),
+      });
+      expect(result.success).toBe(true);
     });
     it('rejects a zero/negative budgetQuation', () => {
       expect(createBidSchema.safeParse({ budgetQuation: '0' }).success).toBe(false);

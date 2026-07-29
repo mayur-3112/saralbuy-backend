@@ -5,7 +5,12 @@ import { z } from 'zod';
 // string from multipart form data; z.coerce mirrors Mongoose's own casting
 // so this doesn't reject anything Mongoose would otherwise accept.
 export const createBidSchema = z.object({
-  budgetQuation: z.coerce.number().positive('Budget must be greater than 0'),
+  // Optional now: when `items` (below) carries a per-material breakdown,
+  // the service derives budgetQuation server-side and ignores whatever the
+  // client sent here. Only single-item/document-upload RFQs (no `items`)
+  // still rely on this client-supplied figure — the service enforces that
+  // one of the two is present; not duplicated here.
+  budgetQuation: z.coerce.number().positive('Budget must be greater than 0').optional(),
   status: z.enum(['active', 'inactive']).optional(),
   availableBrand: z.string().trim().max(200).optional(),
   earliestDeliveryDate: z.coerce.date().optional(),
@@ -21,4 +26,11 @@ export const createBidSchema = z.object({
   // shape validation already happens where it's parsed in
   // services/bid.service.js; not duplicated here.
   businessDets: z.any().optional(),
+  // Per-material quote lines (productItemId/offeredBrand/unitPrice/
+  // availability/remarks) — arrives as a JSON string in the multipart
+  // document-upload flow, same as businessDets. Deep shape/ownership
+  // validation happens in services/bid.service.js (it needs the actual
+  // Product.items[] to validate against, which isn't available here);
+  // not duplicated at this layer.
+  items: z.any().optional(),
 });

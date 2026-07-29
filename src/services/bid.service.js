@@ -169,7 +169,7 @@ export async function updateBidUserDetails({ id, userId, budgetQuation, availabl
 
 export async function createBid({ body, file, buyerId, productId, sellerId }) {
   const {
-    budgetQuation, status, availableBrand, earliestDeliveryDate, businessType,
+    status, availableBrand, earliestDeliveryDate, businessType,
     sellerType, priceBasis, taxes, freightTerms, paymentTerms, location, buyerNote,
   } = body;
 
@@ -184,6 +184,20 @@ export async function createBid({ body, file, buyerId, productId, sellerId }) {
     }
   }
 
+  // Per-material quote lines (see bid.schema.js's `items`). Same string-form
+  // possibility as businessDets above. Optional — a bid on a single-item or
+  // document-upload RFQ has nothing to break down and falls back to the
+  // client-supplied lump-sum budgetQuation below.
+  let quoteItems = body.items;
+  if (typeof quoteItems === 'string') {
+    try {
+      quoteItems = JSON.parse(quoteItems);
+    } catch {
+      quoteItems = undefined;
+    }
+  }
+  if (!Array.isArray(quoteItems)) quoteItems = [];
+
   // Uploaded BEFORE the transaction starts, not inside it: session.withTransaction
   // (below) may retry its callback on a transient error, and an external I/O
   // call like this must never be retried as a side effect of a DB-layer retry
@@ -196,12 +210,9 @@ export async function createBid({ body, file, buyerId, productId, sellerId }) {
   if (!isValidObjectId(buyerId) || !isValidObjectId(productId)) {
     throw new BidServiceError(400, 'Invalid sellerId or productId');
   }
-  if (!budgetQuation) {
-    throw new BidServiceError(400, 'budgetQuation is required');
-  }
 
   const session = await mongoose.startSession();
-  let createdBid, updatedProduct, updatedRequirement;
+  let createdBid, updatedProduct, updatedRequirement, resolvedBudgetQuation;
   try {
     // session.withTransaction (not manual startTransaction/commitTransaction)
     // automatically retries the callback on a TransientTransactionError and
@@ -211,7 +222,7 @@ export async function createBid({ body, file, buyerId, productId, sellerId }) {
       // Prevent a buyer from quoting on their own requirement (market manipulation)
       const productOwner = await productSchema
         .findById(productId)
-        .select('userId isSoldProduct')
+        .select('userId isSoldProduct items quantity')
         .session(session);
       if (!productOwner) {
         throw new BidServiceError(400, 'Product not found');
@@ -221,6 +232,52 @@ export async function createBid({ body, file, buyerId, productId, sellerId }) {
       }
       if (productOwner.isSoldProduct) {
         throw new BidServiceError(400, 'This product is already sold');
+      }
+
+      // budgetQuation is ALWAYS derived server-side, never trusted from the
+      // client — previously the client computed sum(unitPrice*qty) itself
+      // and only sent the total, so nothing stopped a client from sending an
+      // arbitrary number disconnected from the actual per-item prices.
+      let normalizedItems = [];
+      if (quoteItems.length > 0) {
+        const productItemsById = new Map(
+          (productOwner.items || []).map(pi => [pi._id.toString(), pi])
+        );
+        let total = 0;
+        for (const line of quoteItems) {
+          const unitPrice = Number(line.unitPrice);
+          if (!line.productItemId || !isValidObjectId(line.productItemId)) {
+            throw new BidServiceError(400, 'Each quote item requires a valid productItemId');
+          }
+          const productItem = productItemsById.get(line.productItemId.toString());
+          if (!productItem) {
+            throw new BidServiceError(400, 'One of the quoted items does not belong to this requirement');
+          }
+          if (!unitPrice || unitPrice <= 0) {
+            throw new BidServiceError(400, 'Each quote item requires a unit price greater than 0');
+          }
+          const qty = Number(productItem.quantity) || 1;
+          total += unitPrice * qty;
+          normalizedItems.push({
+            productItemId: line.productItemId,
+            offeredBrand: line.offeredBrand || '',
+            unitPrice,
+            availability: ['in_stock', 'lead_time', 'unavailable'].includes(line.availability)
+              ? line.availability
+              : 'in_stock',
+            remarks: line.remarks || '',
+          });
+        }
+        resolvedBudgetQuation = total;
+      } else {
+        // No per-item breakdown (single-item or document-upload RFQ) —
+        // fall back to the lump-sum figure the client already computes for
+        // those flows (there's nothing to derive it from server-side).
+        resolvedBudgetQuation = Number(body.budgetQuation);
+      }
+
+      if (!resolvedBudgetQuation || resolvedBudgetQuation <= 0) {
+        throw new BidServiceError(400, 'budgetQuation is required');
       }
 
       const existingBid = await bidSchema.findOne({ sellerId, buyerId, productId }, null, { session });
@@ -247,7 +304,9 @@ export async function createBid({ body, file, buyerId, productId, sellerId }) {
       const bid = await bidSchema.create(
         [
           {
-            sellerId, buyerId, productId, budgetQuation,
+            sellerId, buyerId, productId,
+            budgetQuation: resolvedBudgetQuation,
+            items: normalizedItems,
             status: status || 'active',
             availableBrand, earliestDeliveryDate, sellerType, priceBasis, taxes,
             freightTerms, paymentTerms, location, buyerNote, quoteDocument, businessType,
@@ -271,7 +330,7 @@ export async function createBid({ body, file, buyerId, productId, sellerId }) {
       }
       updatedRequirement = await requirementSchema.findOneAndUpdate(
         { productId, buyerId },
-        { $push: { sellers: { sellerId, budgetAmount: budgetQuation, bidId: createdBid._id } } },
+        { $push: { sellers: { sellerId, budgetAmount: resolvedBudgetQuation, bidId: createdBid._id } } },
         { new: true, session }
       );
       if (!updatedRequirement) {
@@ -318,7 +377,7 @@ export async function createBid({ body, file, buyerId, productId, sellerId }) {
         description: `${sellerName} placed a new quote on your product "${productTitle}".`,
         roomId: null,
         metadata: {
-          amount: budgetQuation,
+          amount: resolvedBudgetQuation,
           bidId: createdBid._id.toString(),
           productId: productId.toString(),
         },
@@ -474,6 +533,9 @@ export async function getBidById({ id, requesterId, limit = 10, page = 1 }) {
     availableBrand: b.availableBrand,
     earliestDeliveryDate: b.earliestDeliveryDate,
     businessType: b.businessType,
+    // Per-material quote lines — empty array on older bids and on
+    // single-item/document-upload RFQs with no breakdown to show.
+    items: b.items || [],
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
   }));
@@ -607,17 +669,24 @@ export async function getBidDetailsBySellerIdAndProductId({ sellerId, productId,
 // SB-008: buyer-only side-by-side comparison of all quotes on a requirement
 export async function getBidsForProductCompare({ productId, userId }) {
   if (!isValidObjectId(productId)) throw new BidServiceError(400, 'Invalid product id');
-  const product = await productSchema.findById(productId).select('userId title').lean();
+  // `items` included so the comparison grid can render each requested
+  // material as its own row (name/spec/qty/unit), independent of any one
+  // supplier's quote — the "Requested Item" column in an item-by-item
+  // comparison, per the RFQ item-level procurement redesign.
+  const product = await productSchema.findById(productId).select('userId title items isMultiple').lean();
   if (!product) throw new BidServiceError(404, 'Product not found');
   if (product.userId.toString() !== userId.toString()) {
     throw new BidServiceError(403, 'Only the buyer can compare quotes');
   }
+  // `bids[].items` reaches the client unfiltered here (.lean() with no
+  // projection) — each bid's per-material quote lines line up against
+  // product.items by productItemId.
   const bids = await bidSchema
     .find({ productId })
     .populate('sellerId', 'firstName lastName phone currentLocation address profileImage')
     .sort({ budgetQuation: 1 })
     .lean();
-  return { statusCode: 200, message: 'Quotes fetched', data: bids };
+  return { statusCode: 200, message: 'Quotes fetched', data: { product, bids } };
 }
 
 // SB-013: unified activity timeline for a requirement (buyer-only)

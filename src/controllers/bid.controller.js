@@ -12,6 +12,19 @@ import { SOCKET_EVENTS } from '../socket/socketEvents.js';
 import productNotificaitonSchema from '../models/productNotificaiton.schema.js';
 import uploadFile from '../config/imageKit.config.js';
 import { maskedPartyView, cityOnly, maskName } from '../helpers/maskIdentity.js';
+import { decryptField } from '../utils/fieldEncryption.js';
+
+// user.schema.js's gstin/pan getters only run on a real Mongoose document —
+// .lean() (used throughout this file for read performance) skips the
+// Mongoose document layer entirely and returns raw stored values, so any
+// lean-fetched user object needs this applied explicitly before its
+// gstin/pan reach a response.
+const decryptUserGstPan = user => {
+  if (!user) return user;
+  if (user.gstin) user.gstin = decryptField(user.gstin);
+  if (user.pan) user.pan = decryptField(user.pan);
+  return user;
+};
 
 export const getLatestThreeBidAndDraft = async (req, res) => {
   try {
@@ -445,8 +458,8 @@ export const createBid = async (req, res) => {
 
     // Populate response (outside transaction)
     const [sellerDetails, buyerDetails, productDetails] = await Promise.all([
-      userSchema.findById(sellerId).select('-password -__v').lean(),
-      userSchema.findById(buyerId).select('-password -__v').lean(),
+      userSchema.findById(sellerId).select('-password -__v').lean().then(decryptUserGstPan),
+      userSchema.findById(buyerId).select('-password -__v').lean().then(decryptUserGstPan),
       productSchema.findById(productId).select('title images categoryId').lean(),
     ]);
 
@@ -749,7 +762,7 @@ export const getBidById = async (req, res) => {
 
     let buyer = null;
     if (product.userId) {
-      const buyerData = await userSchema.findById(product.userId).select('-password -__v').lean();
+      const buyerData = decryptUserGstPan(await userSchema.findById(product.userId).select('-password -__v').lean());
 
       if (buyerData) {
         // The buyer sees their own full details; a seller viewing this bid gets

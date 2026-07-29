@@ -1,6 +1,7 @@
 import { ApiResponse } from '../../helpers/ApiReponse.js';
 import userSchema from '../../models/user.schema.js';
 import { applyVerificationDecision } from '../../services/verificationDecision.service.js';
+import { decryptField } from '../../utils/fieldEncryption.js';
 
 export const adminGetVerificationQueue = async (req, res) => {
   try {
@@ -12,11 +13,16 @@ export const adminGetVerificationQueue = async (req, res) => {
     const matchQuery = {};
     if (status && status !== 'all') matchQuery.verificationStatus = status;
     if (text && text.trim() !== '') {
+      // gstin is now stored encrypted (see user.schema.js) — a partial
+      // regex match against ciphertext can never succeed, so that clause
+      // is dropped rather than left in as dead, misleading code. An exact
+      // GSTIN match would still need the value run through encryptField()
+      // first; not added here since this is a partial "search as you type"
+      // field, not an exact-match lookup.
       matchQuery['$or'] = [
         { firstName: { $regex: text, $options: 'i' } },
         { lastName: { $regex: text, $options: 'i' } },
         { phone: { $regex: text, $options: 'i' } },
-        { gstin: { $regex: text, $options: 'i' } },
         { businessName: { $regex: text, $options: 'i' } },
       ];
     }
@@ -50,6 +56,13 @@ export const adminGetVerificationQueue = async (req, res) => {
         { $group: { _id: '$verificationStatus', count: { $sum: 1 } } },
       ]),
     ]);
+
+    // .lean() above skips the schema's gstin/pan decrypt-on-read getters —
+    // apply it explicitly so the review queue shows real values, not ciphertext.
+    for (const u of users) {
+      if (u.gstin) u.gstin = decryptField(u.gstin);
+      if (u.pan) u.pan = decryptField(u.pan);
+    }
 
     return ApiResponse.successResponse(res, 200, 'Verification queue fetched', {
       users,

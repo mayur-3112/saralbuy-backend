@@ -14,6 +14,7 @@ const router = express.Router();
 router.post('/send-otp', sendOtpLimiter, otpController);
 router.post('/verify-otp', verifyOtpLimiter, verifyController);
 router.get('/logout', auth, userController.logout);
+router.post('/request-deletion', auth, userController.requestAccountDeletion);
 router.get('/profile', auth, userController.getProfile);
 router.get('/user-profile', auth, userController.getUserProfile);
 router.post('/update-profile', auth, allowUploadFields(), userController.updateProfile);

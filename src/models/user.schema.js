@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/secrets.js';
+import { encryptField, decryptField } from '../utils/fieldEncryption.js';
 
 // const addressSchema = new mongoose.Schema({
 //   addressLine: { type: String, },
@@ -70,9 +71,16 @@ const userSchema = new mongoose.Schema(
     storeAddress: { type: String, default: null, trim: true },
 
     // Business verification (post-Aadhaar model).
-    // Uppercased on save via pre-hook below.
-    gstin: { type: String, default: null, trim: true, uppercase: true },
-    pan:   { type: String, default: null, trim: true, uppercase: true },
+    // Uppercased on save via pre-hook below. Stored encrypted at rest when
+    // FIELD_ENCRYPTION_KEY is configured (see utils/fieldEncryption.js) —
+    // trim/uppercase apply first, then the custom set/get pair encrypts on
+    // write and transparently decrypts on every read (direct property
+    // access and toJSON/toObject, since getters:true is set below), so no
+    // controller code needed to change. Existing plaintext records (or any
+    // written while unconfigured) read back unchanged — no migration
+    // required to ship this; a backfill for old records is a follow-up.
+    gstin: { type: String, default: null, trim: true, uppercase: true, set: encryptField, get: decryptField },
+    pan:   { type: String, default: null, trim: true, uppercase: true, set: encryptField, get: decryptField },
     // Document uploads (ImageKit URLs) — supplier proves what they claim.
     gstinDocumentUrl: { type: String, default: null },
     panDocumentUrl:   { type: String, default: null },
@@ -99,6 +107,16 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
     verificationNotes: { type: String, default: null, trim: true },
+
+    // DPDP-style erasure request. A user requests deletion; an admin fulfills
+    // it by anonymizing the record (see admin/dataErasure.controller.js).
+    // Not an instant hard-delete: this account's _id is referenced by other
+    // users' Bid/ClosedDeal/Chat records, and cascading-deleting those would
+    // corrupt other people's transaction history. Anonymization (scrubbing
+    // PII, keeping the _id and non-personal records intact) is the standard,
+    // safer pattern for this exact situation.
+    deletionRequestedAt: { type: Date, default: null },
+    deletionCompletedAt: { type: Date, default: null },
   },
   {
     timestamps: true,

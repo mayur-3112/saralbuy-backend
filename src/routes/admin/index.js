@@ -15,6 +15,7 @@ import userVerificationRoute from './userVerification.route.js';
 import disputeRoute from './dispute.route.js';
 import notificationBlastRoute from './notificationBlast.route.js';
 import dealSurveyRoute from './dealSurvey.route.js';
+import dataErasureRoute from './dataErasure.route.js';
 const router = express.Router();
 
 router.get('/', (_, res) => {
@@ -56,6 +57,7 @@ const routes = [
   { path: '/disputes', router: disputeRoute },
   { path: '/notification-blast', router: notificationBlastRoute },
   { path: '/deal-surveys', router: dealSurveyRoute },
+  { path: '/data-erasure', router: dataErasureRoute },
 ];
 routes.forEach(route => {
   router.use(route.path, route.router);

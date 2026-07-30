@@ -113,10 +113,6 @@ const bidSchema = new mongoose.Schema(
         productItemId: { type: mongoose.Schema.Types.ObjectId },
         offeredBrand: { type: String, default: '' },
         unitPrice: { type: Number },
-        // The unit the seller is quoting per (defaults to the buyer's
-        // requested unit on the frontend, but kept editable/independent here
-        // since a seller may reasonably quote per a different unit).
-        unit: { type: String, default: '' },
         availability: {
           type: String,
           enum: ['in_stock', 'lead_time', 'unavailable'],

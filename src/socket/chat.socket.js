@@ -52,15 +52,12 @@ const chatSocket = (io, socket) => {
     }
   };
 
-  // User Status
-
-  socket.on(SOCKET_EVENTS.ONLINE_USER, () => {
-    onlineUsers.set(userId, socket.id);
-    io.emit(SOCKET_EVENTS.USER_STATUS, {
-      userId,
-      isOnline: true,
-    });
-  });
+  // User Status — actual online/offline lifecycle (connect/disconnect,
+  // heartbeat sweep, grace window) is owned by config/socket.js now; a
+  // connected socket is already marked online before this handler runs.
+  // ONLINE_USER is kept as a no-op listener for any older client build
+  // still emitting it, so it doesn't error as an unhandled event.
+  socket.on(SOCKET_EVENTS.ONLINE_USER, () => {});
 
   // Answer a "is this user online?" query — without this, a partner who was
   // already connected always showed as Offline (the client only heard the
@@ -505,12 +502,12 @@ const chatSocket = (io, socket) => {
     await productNotificaitonSchema.findByIdAndUpdate(notifId, { $set: { seen: true } });
   });
 
-  socket.on(SOCKET_EVENTS.DISCONNECT, () => {
-    onlineUsers.delete(userId);
-    io.emit(SOCKET_EVENTS.USER_STATUS, {
-      userId,
-      isOnline: false,
-    });
-  });
+  // Real disconnect handling (grace window + lastSeenAt) lives in
+  // config/socket.js's built-in `disconnect` handler, which fires
+  // reliably even when the client never gets a chance to emit a custom
+  // event (closed tab, crashed browser, network drop) — the previous
+  // version of this file only cleaned up on a client-emitted
+  // SOCKET_EVENTS.DISCONNECT, which meant presence never went offline
+  // unless the client happened to emit that exact event first.
 };
 export default chatSocket;

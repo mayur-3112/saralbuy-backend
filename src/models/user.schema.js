@@ -36,6 +36,13 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Updated when the user's last socket connection actually drops (after
+    // the presence grace window) — backs the "Last seen" label shown once
+    // a user goes offline.
+    lastSeenAt: {
+      type: Date,
+      default: null,
+    },
     businessName: {
       type: String,
       default: null,

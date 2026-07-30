@@ -12,6 +12,7 @@ export const SOCKET_EVENTS = {
   ONLINE_USER: 'chat:online_user',
   OFFLINE_USER: 'chat:offline_user',
   USER_STATUS: 'chat:user_status',
+  HEARTBEAT: 'chat:heartbeat',
   DEAL_CLOUSER: 'chat:deal_clouser',
   DEAL_APPROVAL: 'chat:deal_approval',
   DEAL_STATUS_UPDATE: 'chat:deal_status_update',

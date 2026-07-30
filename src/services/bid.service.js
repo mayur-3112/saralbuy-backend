@@ -262,6 +262,7 @@ export async function createBid({ body, file, buyerId, productId, sellerId }) {
             productItemId: line.productItemId,
             offeredBrand: line.offeredBrand || '',
             unitPrice,
+            unit: line.unit || productItem.quantityUnit || '',
             availability: ['in_stock', 'lead_time', 'unavailable'].includes(line.availability)
               ? line.availability
               : 'in_stock',

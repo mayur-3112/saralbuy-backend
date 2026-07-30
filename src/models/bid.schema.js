@@ -61,6 +61,16 @@ const bidSchema = new mongoose.Schema(
       default: '',
     },
 
+    // Whether `budgetQuation` already includes the `taxes` GST rate, or
+    // GST is added on top of it. Additive/optional -- older bids default
+    // to false (exclusive), matching how the price was always presented
+    // before this field existed (a raw amount with no inclusive/exclusive
+    // treatment implied).
+    gstInclusive: {
+      type: Boolean,
+      default: false,
+    },
+
     freightTerms: {
       type: String,
       default: '',

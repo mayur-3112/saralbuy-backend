@@ -174,4 +174,43 @@ describe('Item-level quote submission (RFQ item-level procurement)', () => {
     // 2 MT (parsed from the description) x 60000, NOT 1 x 60000
     expect(bid.budgetQuation).toBe(120000);
   });
+
+  it('persists gstInclusive and defaults it to false when not sent', async () => {
+    const buyer = await userSchema.create({ phone: `+9198786${Math.floor(Math.random() * 100000)}` });
+    const seller = await userSchema.create({ phone: `+9198787${Math.floor(Math.random() * 100000)}` });
+    const sellerToken = seller.generateAuthToken();
+    const product = await productSchema.create({ title: 'GST test RFQ', userId: buyer._id, draft: false });
+    await requirementSchema.create({ productId: product._id, buyerId: buyer._id, sellers: [] });
+
+    const res = await request(app)
+      .post(`/api/v1/bid/create/${buyer._id}/${product._id}`)
+      .set('Cookie', `authToken=${sellerToken}`)
+      .field('budgetQuation', '125000')
+      .field('taxes', '5')
+      .field('gstInclusive', 'true');
+
+    expect(res.status).toBe(200);
+    const bid = await bidSchema.findOne({ productId: product._id });
+    expect(bid.taxes).toBe('5');
+    expect(bid.gstInclusive).toBe(true);
+
+    // A second bid with no gstInclusive sent should default to false
+    // (exclusive) -- matching how a raw price was always presented
+    // before this field existed.
+    const buyer2 = await userSchema.create({ phone: `+9198788${Math.floor(Math.random() * 100000)}` });
+    const seller2 = await userSchema.create({ phone: `+9198789${Math.floor(Math.random() * 100000)}` });
+    const sellerToken2 = seller2.generateAuthToken();
+    const product2 = await productSchema.create({ title: 'GST default test RFQ', userId: buyer2._id, draft: false });
+    await requirementSchema.create({ productId: product2._id, buyerId: buyer2._id, sellers: [] });
+
+    const res2 = await request(app)
+      .post(`/api/v1/bid/create/${buyer2._id}/${product2._id}`)
+      .set('Cookie', `authToken=${sellerToken2}`)
+      .field('budgetQuation', '50000')
+      .field('taxes', '18');
+
+    expect(res2.status).toBe(200);
+    const bid2 = await bidSchema.findOne({ productId: product2._id });
+    expect(bid2.gstInclusive).toBe(false);
+  });
 });

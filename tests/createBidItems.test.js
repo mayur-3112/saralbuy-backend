@@ -136,4 +136,42 @@ describe('Item-level quote submission (RFQ item-level procurement)', () => {
     expect(bid.budgetQuation).toBe(15000);
     expect(bid.items).toHaveLength(0);
   });
+
+  it('falls back to a quantity embedded in typeOfProduct when Product.items[].quantity is blank', async () => {
+    // Some materials were entered with the real quantity/unit typed into
+    // a free-text field (e.g. "TMT Reinforcement Bars - 2 MT") and
+    // Quantity left empty. Product.items[] has no itemName/itemDescription
+    // fields on the schema (Mongoose silently drops them), so typeOfProduct
+    // is the real persisted field this ends up in. The server must not
+    // silently price this as quantity=1 -- that's real money, wrong.
+    const buyer = await userSchema.create({ phone: `+9198784${Math.floor(Math.random() * 100000)}` });
+    const seller = await userSchema.create({ phone: `+9198785${Math.floor(Math.random() * 100000)}` });
+    const sellerToken = seller.generateAuthToken();
+
+    const product = await productSchema.create({
+      title: 'TMT Bars RFQ',
+      userId: buyer._id,
+      draft: false,
+      isMultiple: true,
+      items: [
+        { subCategoryName: 'TMT Bars', typeOfProduct: 'TMT Reinforcement Bars - 2 MT', quantityUnit: 'PCS' },
+      ],
+    });
+    await requirementSchema.create({ productId: product._id, buyerId: buyer._id, sellers: [] });
+    const savedProduct = await productSchema.findById(product._id).lean();
+    const [tmtItem] = savedProduct.items;
+    expect(tmtItem.quantity).toBeFalsy(); // confirms the fixture reproduces the bug precondition
+
+    const items = [{ productItemId: tmtItem._id.toString(), unitPrice: 60000 }];
+
+    const res = await request(app)
+      .post(`/api/v1/bid/create/${buyer._id}/${product._id}`)
+      .set('Cookie', `authToken=${sellerToken}`)
+      .field('items', JSON.stringify(items));
+
+    expect(res.status).toBe(200);
+    const bid = await bidSchema.findOne({ productId: product._id });
+    // 2 MT (parsed from the description) x 60000, NOT 1 x 60000
+    expect(bid.budgetQuation).toBe(120000);
+  });
 });

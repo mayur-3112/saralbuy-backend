@@ -12,6 +12,7 @@ import productNotificaitonSchema from '../models/productNotificaiton.schema.js';
 import uploadFile from '../config/imageKit.config.js';
 import { maskedPartyView, cityOnly, maskName } from '../helpers/maskIdentity.js';
 import { decryptField } from '../utils/fieldEncryption.js';
+import { resolveItemQuantity } from '../utils/parseMaterialText.js';
 
 /**
  * M3.T1 (Implementation Master Plan) — service layer extracted out of
@@ -256,7 +257,7 @@ export async function createBid({ body, file, buyerId, productId, sellerId }) {
           if (!unitPrice || unitPrice <= 0) {
             throw new BidServiceError(400, 'Each quote item requires a unit price greater than 0');
           }
-          const qty = Number(productItem.quantity) || 1;
+          const qty = resolveItemQuantity(productItem);
           total += unitPrice * qty;
           normalizedItems.push({
             productItemId: line.productItemId,

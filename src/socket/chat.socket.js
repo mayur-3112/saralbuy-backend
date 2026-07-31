@@ -9,6 +9,26 @@ import productNotificaitonSchema from '../models/productNotificaiton.schema.js';
 
 const chatSocket = (io, socket) => {
   const userId = socket.user._id.toString();
+
+  // Auth helper for every chat-scoped event. Looks the chat up by roomId
+  // and returns { chat, isBuyer, isSeller } only if the connected user
+  // is actually a party to that chat -- otherwise null, which every
+  // caller must treat as "silently reject, no side effects".
+  //
+  // Before this existed, JOIN_ROOM/SEND_MESSAGE/MARK_READ/DEAL_* all
+  // trusted whatever roomId + party role the client sent, so any
+  // logged-in user could join / post into / mark-read / negotiate deals
+  // on any two other users' chat by guessing the roomId (which was
+  // derivable from a public /user-profile/:userId URL).
+  const assertParty = async roomId => {
+    if (!roomId) return null;
+    const chat = await chatSchema.findOne({ roomId }).lean();
+    if (!chat) return null;
+    const isBuyer = chat.buyerId.toString() === userId;
+    const isSeller = chat.sellerId.toString() === userId;
+    if (!isBuyer && !isSeller) return null;
+    return { chat, isBuyer, isSeller };
+  };
   const createAndEmitNotification = async ({
     recipientId,
     senderId,
@@ -124,9 +144,17 @@ const chatSocket = (io, socket) => {
 
   // Join a chat room ───────────────────────────────────────
   socket.on(SOCKET_EVENTS.JOIN_ROOM, async ({ roomId, buyerId, sellerId, productId }) => {
-    socket.join(roomId);
+    if (!roomId) return;
 
-    if (buyerId && sellerId && productId) {
+    // Existing chat: connected user must be one of the parties. Chat
+    // creation is buyer-only -- a seller cannot start a conversation
+    // that a buyer hasn't opted into (product policy: "chat option
+    // only until buyer initiates"). Both are enforced here.
+    let existing = await chatSchema.findOne({ roomId }).lean();
+
+    if (!existing) {
+      if (!buyerId || !sellerId || !productId) return;
+      if (buyerId.toString() !== userId) return; // seller cannot initiate
       await chatSchema.findOneAndUpdate(
         { roomId },
         {
@@ -143,9 +171,15 @@ const chatSocket = (io, socket) => {
         },
         { upsert: true, new: true }
       );
+      existing = await chatSchema.findOne({ roomId }).lean();
+    } else {
+      const isBuyer = existing.buyerId.toString() === userId;
+      const isSeller = existing.sellerId.toString() === userId;
+      if (!isBuyer && !isSeller) return; // silent reject
     }
 
-    const chat = await chatSchema.findOne({ roomId }).lean();
+    socket.join(roomId);
+    const chat = existing;
     if (chat) {
       socket.emit(SOCKET_EVENTS.RECEIVE_MESSAGE, { roomId, messages: chat.messages });
     }
@@ -198,8 +232,16 @@ const chatSocket = (io, socket) => {
     }
   });
   //  Send message ───────────────────────────────────────────
-  socket.on(SOCKET_EVENTS.SEND_MESSAGE, async ({ roomId, message, senderType, attachment }) => {
+  socket.on(SOCKET_EVENTS.SEND_MESSAGE, async ({ roomId, message, attachment }) => {
     try {
+      // senderType MUST come from the server (derived from the JWT'd
+      // connected user + the chat's real parties). Previously it was
+      // trusted from the client payload, letting anyone claim to be
+      // "buyer" or "seller" in any chat they'd guessed the roomId of.
+      const party = await assertParty(roomId);
+      if (!party) return;
+      const senderType = party.isBuyer ? 'buyer' : 'seller';
+
       const newMsg = {
         senderId: userId,
         senderType,
@@ -268,8 +310,13 @@ const chatSocket = (io, socket) => {
     }
   });
   //  Mark messages as read ──────────────────────────────────
-  socket.on(SOCKET_EVENTS.MARK_READ, async ({ roomId, readerType }) => {
-    const field = readerType === 'buyer' ? 'buyerUnreadCount' : 'sellerUnreadCount';
+  socket.on(SOCKET_EVENTS.MARK_READ, async ({ roomId }) => {
+    const party = await assertParty(roomId);
+    if (!party) return;
+    // Reader type is who the connected user actually IS in this chat --
+    // client-supplied `readerType` was ignored so a user could not zero
+    // out the OTHER party's unread counter.
+    const field = party.isBuyer ? 'buyerUnreadCount' : 'sellerUnreadCount';
     await chatSchema.findOneAndUpdate({ roomId }, { $set: { [field]: 0 } });
   });
 
@@ -277,16 +324,23 @@ const chatSocket = (io, socket) => {
 
   socket.on(SOCKET_EVENTS.DEAL_CLOUSER, async payload => {
     try {
+      // Only the actual buyer of this chat can initiate a deal-closure
+      // request. Previously, buyerId/sellerId/productId were fully
+      // trusted from the client, so any logged-in user could create a
+      // real ClosedDeal against any two other users' chat -- a serious
+      // integrity + notification-spam issue.
+      const party = await assertParty(payload.roomId);
+      if (!party || !party.isBuyer) return;
       const productBudget = await productSchema
-        .findById(payload.productId)
+        .findById(party.chat.productId)
         .select('minimumBudget isSoldProduct')
         .lean();
 
       const deal = await closeDealSchema.create({
-        roomId: payload.roomId,
-        buyerId: payload.buyerId,
-        sellerId: payload.sellerId,
-        productId: payload.productId,
+        roomId: party.chat.roomId,
+        buyerId: party.chat.buyerId,
+        sellerId: party.chat.sellerId,
+        productId: party.chat.productId,
         amount: payload.amount,
         yourBudget: productBudget?.minimumBudget || 0,
         agreedTerms: payload.agreedTerms || {},
@@ -295,13 +349,14 @@ const chatSocket = (io, socket) => {
         initiator: 'buyer',
       });
 
-      const sellerSocketId = onlineUsers.get(payload.sellerId.toString());
+      const sellerIdStr = party.chat.sellerId.toString();
+      const sellerSocketId = onlineUsers.get(sellerIdStr);
       const dealPayload = {
         dealId: deal._id.toString(),
         amount: payload.amount,
-        roomId: payload.roomId,
-        buyerId: payload.buyerId,
-        sellerId: payload.sellerId,
+        roomId: party.chat.roomId,
+        buyerId: party.chat.buyerId.toString(),
+        sellerId: sellerIdStr,
         agreedTerms: deal.agreedTerms || {},
       };
 
@@ -311,7 +366,7 @@ const chatSocket = (io, socket) => {
       }
 
       socket.emit(SOCKET_EVENTS.DEAL_STATUS_UPDATE, {
-        roomId: payload.roomId,
+        roomId: party.chat.roomId,
         dealId: deal._id.toString(),
         status: 'waiting_seller_approval',
         amount: payload.amount,
@@ -320,14 +375,14 @@ const chatSocket = (io, socket) => {
       // create new notificaiton
 
       await createAndEmitNotification({
-        recipientId: payload.sellerId,
-        senderId: payload.buyerId,
+        recipientId: party.chat.sellerId,
+        senderId: party.chat.buyerId,
         type: 'deal_request',
         title: 'New deal request',
         description: `A buyer sent you a deal request for ₹${payload.amount}.`,
-        productId: payload.productId,
+        productId: party.chat.productId,
         dealId: deal._id,
-        roomId: payload.roomId,
+        roomId: party.chat.roomId,
         metadata: { amount: payload.amount },
       });
     } catch (err) {
@@ -339,6 +394,11 @@ const chatSocket = (io, socket) => {
   socket.on(SOCKET_EVENTS.DEAL_APPROVAL, async ({ dealId, action, roomId }) => {
     try {
       if (!['accept', 'reject'].includes(action)) return;
+      // Only the actual seller of this chat may accept/reject its deal.
+      const party = await assertParty(roomId);
+      if (!party || !party.isSeller) return;
+      const dealCheck = await closeDealSchema.findById(dealId).select('roomId').lean();
+      if (!dealCheck || dealCheck.roomId !== roomId) return;
 
       const newDealStatus = action === 'accept' ? 'accepted' : 'rejected';
       const newClosedDealStatus = action === 'accept' ? 'completed' : 'rejected';
@@ -433,6 +493,9 @@ const chatSocket = (io, socket) => {
   socket.on(SOCKET_EVENTS.DEAL_RATING, async ({ dealId, rating }) => {
     try {
       if (!dealId || typeof rating !== 'number' || rating < 1 || rating > 5) return;
+      // Only the actual buyer of this deal may rate the seller.
+      const dealCheck = await closeDealSchema.findById(dealId).select('buyerId').lean();
+      if (!dealCheck || dealCheck.buyerId.toString() !== userId) return;
 
       const updatedDeal = await closeDealSchema.findByIdAndUpdate(
         dealId,

@@ -868,10 +868,7 @@ export async function updateQuoteStatus({ bidId, quoteStatus, userId }) {
         const productDetails = await productSchema.findById(bid.productId).select('title').session(session);
         let title = '';
         let description = '';
-        if (quoteStatus === 'shortlisted') {
-          title = 'Quote Shortlisted!';
-          description = `Your quote for "${productDetails.title}" has been shortlisted by the buyer.`;
-        } else if (quoteStatus === 'accepted') {
+        if (quoteStatus === 'accepted') {
           title = 'Quote Accepted!';
           description = `Congratulations! Your quote for "${productDetails.title}" was accepted.`;
         } else if (quoteStatus === 'rejected') {

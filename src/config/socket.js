@@ -100,9 +100,10 @@ export const initSocket = async server => {
     socket.on('disconnect', () => {
       console.log('User Disconnected:', userId);
       removeSocket(userId, socket.id, async uid => {
-        io.emit(SOCKET_EVENTS.USER_STATUS, { userId: uid, isOnline: false });
+        const now = new Date();
+        io.emit(SOCKET_EVENTS.USER_STATUS, { userId: uid, isOnline: false, lastSeenAt: now });
         try {
-          await userSchema.findByIdAndUpdate(uid, { $set: { lastSeenAt: new Date() } });
+          await userSchema.findByIdAndUpdate(uid, { $set: { lastSeenAt: now } });
         } catch (err) {
           console.error('Failed to persist lastSeenAt:', err.message);
         }

@@ -82,11 +82,16 @@ const chatSocket = (io, socket) => {
   // Answer a "is this user online?" query — without this, a partner who was
   // already connected always showed as Offline (the client only heard the
   // connect/disconnect broadcasts, never the current state on open).
-  socket.on(SOCKET_EVENTS.USER_STATUS, ({ targetUserId } = {}) => {
+  // Answer a "is this user online?" query — returns isOnline, lastSeenAt, and status
+  socket.on(SOCKET_EVENTS.USER_STATUS, async ({ targetUserId } = {}) => {
     if (!targetUserId) return;
+    const targetIdStr = targetUserId.toString();
+    const userDoc = await userSchema.findById(targetIdStr).select('lastSeenAt status').lean();
     socket.emit(SOCKET_EVENTS.USER_STATUS, {
-      userId: targetUserId,
-      isOnline: onlineUsers.has(targetUserId.toString()),
+      userId: targetIdStr,
+      isOnline: onlineUsers.has(targetIdStr),
+      lastSeenAt: userDoc?.lastSeenAt || null,
+      status: userDoc?.status || 'active',
     });
   });
 
@@ -95,7 +100,10 @@ const chatSocket = (io, socket) => {
     const user = await userSchema.findById(sellerId).lean();
     if (!user) return;
     delete user.password;
-    socket.emit(SOCKET_EVENTS.CHAT_USER, user);
+    socket.emit(SOCKET_EVENTS.CHAT_USER, {
+      ...user,
+      isOnline: onlineUsers.has(sellerId.toString()),
+    });
   });
 
   //  Fetch all recent chats for the navbar / sidebar ────────
@@ -108,14 +116,15 @@ const chatSocket = (io, socket) => {
           $or: [{ buyerId: uid }, { sellerId: uid }],
         })
         .sort({ updatedAt: -1 })
-        .populate('buyerId', 'firstName lastName profileImage')
-        .populate('sellerId', 'firstName lastName profileImage')
+        .populate('buyerId', 'firstName lastName profileImage lastSeenAt status')
+        .populate('sellerId', 'firstName lastName profileImage lastSeenAt status')
         .populate('productId', 'title')
         .lean();
       const shaped = await Promise.all(
         chats.map(async chat => {
           const isBuyer = chat.buyerId._id.toString() === userId;
           const partner = isBuyer ? chat.sellerId : chat.buyerId;
+          const partnerIdStr = partner._id.toString();
 
           return {
             roomId: chat.roomId,
@@ -130,7 +139,9 @@ const chatSocket = (io, socket) => {
             buyerUnreadCount: chat.buyerUnreadCount,
             sellerUnreadCount: chat.sellerUnreadCount,
             chatrating: isBuyer ? chat.buyerRating : chat.sellerRating,
-            isOnline: false,
+            isOnline: onlineUsers.has(partnerIdStr),
+            lastSeenAt: partner.lastSeenAt || null,
+            status: partner.status || 'active',
           };
         })
       );

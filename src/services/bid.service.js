@@ -173,10 +173,6 @@ export async function createBid({ body, file, buyerId, productId, sellerId }) {
     status, availableBrand, earliestDeliveryDate, businessType,
     sellerType, priceBasis, taxes, freightTerms, paymentTerms, location, buyerNote,
   } = body;
-  // Multipart bodies arrive as strings ("true"/"false"); a plain JSON body
-  // may already send a real boolean -- accept either without mutating the
-  // rest of req.body's string-vs-boolean handling elsewhere.
-  const gstInclusive = body.gstInclusive === true || body.gstInclusive === 'true';
 
   // When submitted as multipart (document-upload quote flow), objects arrive
   // as JSON strings and the quotation file arrives on req.file.
@@ -313,7 +309,7 @@ export async function createBid({ body, file, buyerId, productId, sellerId }) {
             budgetQuation: resolvedBudgetQuation,
             items: normalizedItems,
             status: status || 'active',
-            availableBrand, earliestDeliveryDate, sellerType, priceBasis, taxes, gstInclusive,
+            availableBrand, earliestDeliveryDate, sellerType, priceBasis, taxes,
             freightTerms, paymentTerms, location, buyerNote, quoteDocument, businessType,
             ...(businessType === 'business' && { businessDets }),
           },

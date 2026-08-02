@@ -35,5 +35,6 @@ router.post(
   userController.submitVerification
 );
 router.get('/verification-status', auth, userController.getVerificationStatus);
+router.get('/showcase-suppliers', userController.getPublicSuppliers);
 
 export default router;

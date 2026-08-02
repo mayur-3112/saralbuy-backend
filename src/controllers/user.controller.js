@@ -321,6 +321,9 @@ export const updateProfile = async (req, res) => {
       businessSince,
       businessPhone,
       storeAddress,
+      primaryCategoryId,
+      secondaryCategoryIds,
+      supplierHeadline,
     } = req.body;
 
     const profilePic = req.files?.image?.[0];
@@ -368,6 +371,17 @@ export const updateProfile = async (req, res) => {
     if (businessSince !== undefined) updates.businessSince = businessSince === '' ? null : Number(businessSince);
     if (businessPhone !== undefined) updates.businessPhone = businessPhone;
     if (storeAddress !== undefined) updates.storeAddress = storeAddress;
+    if (primaryCategoryId !== undefined) updates.primaryCategoryId = primaryCategoryId || null;
+    if (secondaryCategoryIds !== undefined) {
+      try {
+        updates.secondaryCategoryIds = typeof secondaryCategoryIds === 'string'
+          ? JSON.parse(secondaryCategoryIds)
+          : (Array.isArray(secondaryCategoryIds) ? secondaryCategoryIds : []);
+      } catch (_) {
+        updates.secondaryCategoryIds = [];
+      }
+    }
+    if (supplierHeadline !== undefined) updates.supplierHeadline = supplierHeadline;
 
     const user = await userSchema
       .findByIdAndUpdate(req.user.userId, { $set: updates }, { new: true })
@@ -521,5 +535,48 @@ export const getVerificationStatus = async (req, res) => {
     return ApiResponse.successResponse(res, 200, 'Verification status', user);
   } catch (err) {
     return ApiResponse.errorResponse(res, 500, err.message);
+  }
+};
+
+/**
+ * Public Supplier Directory & Homepage Showcase
+ * Fetches active suppliers with populated primary & secondary category info
+ * with an unbiased rotation for fair supplier visibility.
+ */
+export const getPublicSuppliers = async (req, res) => {
+  try {
+    const { categoryId, limit = 24 } = req.query;
+
+    const matchQuery = {
+      accountRole: 'supplier',
+      status: 'active',
+    };
+
+    if (categoryId && categoryId !== 'all') {
+      matchQuery.$or = [
+        { primaryCategoryId: categoryId },
+        { secondaryCategoryIds: categoryId },
+      ];
+    }
+
+    const suppliers = await userSchema
+      .find(matchQuery)
+      .select(
+        'firstName lastName businessName organizationName profileImage currentLocation address ' +
+        'verificationStatus accountRole businessDescription supplierCategories primaryCategoryId ' +
+        'secondaryCategoryIds supplierHeadline businessSince createdAt'
+      )
+      .populate('primaryCategoryId', 'categoryName icon')
+      .populate('secondaryCategoryIds', 'categoryName icon')
+      .limit(Number(limit) || 24)
+      .lean();
+
+    // Shuffle for fair, unbiased exposure on home landing page
+    const shuffled = suppliers.sort(() => Math.random() - 0.5);
+
+    return ApiResponse.successResponse(res, 200, 'Public showcase suppliers fetched successfully', shuffled);
+  } catch (err) {
+    console.error('getPublicSuppliers error:', err);
+    return ApiResponse.errorResponse(res, 500, err?.message || 'Failed to fetch showcase suppliers');
   }
 };

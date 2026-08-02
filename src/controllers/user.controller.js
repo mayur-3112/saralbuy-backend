@@ -580,9 +580,9 @@ export const getPublicSuppliers = async (req, res) => {
     const suppliers = await userSchema
       .find(matchQuery)
       .select(
-        'firstName lastName businessName organizationName profileImage currentLocation address ' +
+        'firstName lastName businessName organizationName profileImage currentLocation address storeAddress roleInCompany ' +
         'verificationStatus accountRole businessDescription supplierCategories primaryCategoryId ' +
-        'secondaryCategoryIds supplierHeadline topBrands businessSince createdAt'
+        'secondaryCategoryIds supplierHeadline topBrands businessSince accomplishments topProblemsSolved website createdAt'
       )
       .populate('primaryCategoryId', 'categoryName icon')
       .populate('secondaryCategoryIds', 'categoryName icon')

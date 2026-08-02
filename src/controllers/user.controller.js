@@ -589,10 +589,13 @@ export const getPublicSuppliers = async (req, res) => {
       .limit(Number(limit) || 24)
       .lean();
 
-    // Shuffle for fair, unbiased exposure on home landing page
-    const shuffled = suppliers.sort(() => Math.random() - 0.5);
+    // Verified suppliers get top priority placement (shuffled fairly among themselves),
+    // followed by unverified suppliers.
+    const verified = suppliers.filter(s => s.verificationStatus === 'verified').sort(() => Math.random() - 0.5);
+    const unverified = suppliers.filter(s => s.verificationStatus !== 'verified').sort(() => Math.random() - 0.5);
+    const prioritized = [...verified, ...unverified];
 
-    return ApiResponse.successResponse(res, 200, 'Public showcase suppliers fetched successfully', shuffled);
+    return ApiResponse.successResponse(res, 200, 'Public showcase suppliers fetched successfully', prioritized);
   } catch (err) {
     console.error('getPublicSuppliers error:', err);
     return ApiResponse.errorResponse(res, 500, err?.message || 'Failed to fetch showcase suppliers');

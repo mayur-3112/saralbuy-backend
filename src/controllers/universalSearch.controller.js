@@ -58,6 +58,16 @@ export const universalSearch = async (req, res) => {
       }
     }
 
+    const idRegexCondition = cleanedSearchStr.length >= 3 ? {
+      $expr: {
+        $regexMatch: {
+          input: { $toString: '$_id' },
+          regex: escapeRegex(cleanedSearchStr),
+          options: 'i',
+        },
+      },
+    } : null;
+
     // 1. Category Query
     const categoryOrConditions = [
       { categoryName: regex },
@@ -65,6 +75,9 @@ export const universalSearch = async (req, res) => {
     ];
     if (objectIdQuery) {
       categoryOrConditions.push({ _id: objectIdQuery });
+    }
+    if (idRegexCondition) {
+      categoryOrConditions.push(idRegexCondition);
     }
     const categoryQuery = categorySchema
       .find({ $or: categoryOrConditions })
@@ -89,6 +102,9 @@ export const universalSearch = async (req, res) => {
     ];
     if (objectIdQuery) {
       supplierOrConditions.push({ _id: objectIdQuery });
+    }
+    if (idRegexCondition) {
+      supplierOrConditions.push(idRegexCondition);
     }
 
     const supplierFilter = {
@@ -134,6 +150,9 @@ export const universalSearch = async (req, res) => {
     if (objectIdQuery) {
       rfqOrConditions.push({ _id: objectIdQuery });
     }
+    if (idRegexCondition) {
+      rfqOrConditions.push(idRegexCondition);
+    }
     if (matchedProductIdFromReqId) {
       rfqOrConditions.push({ _id: matchedProductIdFromReqId });
     }
@@ -166,6 +185,9 @@ export const universalSearch = async (req, res) => {
     ];
     if (objectIdQuery) {
       productOrConditions.push({ _id: objectIdQuery });
+    }
+    if (idRegexCondition) {
+      productOrConditions.push(idRegexCondition);
     }
 
     const productFilter = {

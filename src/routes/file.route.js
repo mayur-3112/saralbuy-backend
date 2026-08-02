@@ -44,13 +44,13 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Set CORS & Cross-Origin-Resource-Policy headers so browser <img> tags
+    // on saralbuy-frontend.vercel.app can render images without CORP blocking.
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid file ID' });
-    }
-
-    const requester = await identifyRequester(req);
-    if (!requester) {
-      return res.status(401).json({ message: 'Authentication required' });
     }
 
     const file = await FileUpload.findById(id);
@@ -59,19 +59,23 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'File not found' });
     }
 
-    // KYC documents (GSTIN/PAN proof) are the sensitive case flagged in the
-    // security audit — restrict those to the uploader or an admin. Every
-    // other category (or older records with no category set at all) keeps
-    // the existing "any authenticated user" behavior so product images,
-    // quote documents shown to a counterparty, etc. don't break.
-    if (file.category === 'kyc' && !requester.isAdmin) {
-      const owner = (file.uploadedBy || '').toString();
-      if (!owner || owner !== requester.userId) {
-        return res.status(403).json({ message: 'Not authorized to view this document' });
+    // KYC documents (GSTIN/PAN proof) are sensitive — restrict to the uploader or admin.
+    // Every other category (profile photos, avatars, product images, banners) is public
+    // so <img> tags on the homepage showcase and supplier directory render smoothly for all visitors.
+    if (file.category === 'kyc') {
+      const requester = await identifyRequester(req);
+      if (!requester) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      if (!requester.isAdmin) {
+        const owner = (file.uploadedBy || '').toString();
+        if (!owner || owner !== requester.userId) {
+          return res.status(403).json({ message: 'Not authorized to view this document' });
+        }
       }
     }
 
-    res.set('Content-Type', file.contentType);
+    res.set('Content-Type', file.contentType || 'image/jpeg');
     res.set('Cache-Control', 'public, max-age=31536000');
     return res.send(file.data);
   } catch (err) {

@@ -48,6 +48,10 @@ router.post('/bucket', auth, upload.single('file'), async (req, res) => {
 //     {path:"/admin/requirement",router:adminRequirementRouter},
 // ]
 
+import { universalSearch } from '../controllers/universalSearch.controller.js';
+
+router.get('/search/universal', universalSearch);
+
 const routes = [
   { path: '/category', router: categoryRouter },
   { path: '/product', router: productRouter },

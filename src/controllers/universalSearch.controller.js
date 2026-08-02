@@ -137,7 +137,7 @@ export const universalSearch = async (req, res) => {
       .limit(limitNum)
       .lean();
 
-    // 3. RFQs Query (Active open buyer requirements)
+    // 3. RFQs Query (Active open buyer requirements on site)
     const rfqOrConditions = [
       { title: regex },
       { description: regex },
@@ -157,7 +157,10 @@ export const universalSearch = async (req, res) => {
       rfqOrConditions.push({ _id: matchedProductIdFromReqId });
     }
 
-    const rfqFilter = rfqOpenFilter({ $or: rfqOrConditions });
+    const rfqFilter = rfqOpenFilter({
+      $or: rfqOrConditions,
+      isDelete: { $ne: true },
+    });
     if (category && category !== 'all' && mongoose.Types.ObjectId.isValid(category)) {
       rfqFilter.categoryId = new mongoose.Types.ObjectId(category);
     }
@@ -171,46 +174,11 @@ export const universalSearch = async (req, res) => {
       .limit(limitNum)
       .lean();
 
-    // 4. Products Query (Catalog listings / Items)
-    const productOrConditions = [
-      { title: regex },
-      { description: regex },
-      { brand: regex },
-      { brandName: regex },
-      { toolType: regex },
-      { typeOfProduct: regex },
-      { conditionOfProduct: regex },
-      { 'items.subCategoryName': regex },
-      { 'items.itemName': regex },
-    ];
-    if (objectIdQuery) {
-      productOrConditions.push({ _id: objectIdQuery });
-    }
-    if (idRegexCondition) {
-      productOrConditions.push(idRegexCondition);
-    }
-
-    const productFilter = {
-      $or: productOrConditions,
-    };
-    if (category && category !== 'all' && mongoose.Types.ObjectId.isValid(category)) {
-      productFilter.categoryId = new mongoose.Types.ObjectId(category);
-    }
-
-    const productQuery = productSchema
-      .find(productFilter)
-      .select('title description quantity minimumBudget brand brandName categoryId image createdAt')
-      .populate('categoryId', 'categoryName')
-      .sort({ createdAt: -1 })
-      .limit(limitNum)
-      .lean();
-
     // Execute queries in parallel for high performance
-    const [categoriesRes, suppliersRes, rfqsRes, productsRes] = await Promise.all([
+    const [categoriesRes, suppliersRes, rfqsRes] = await Promise.all([
       categoryQuery,
       supplierQuery,
       rfqQuery,
-      productQuery,
     ]);
 
     // Priority sort suppliers: verified first
@@ -223,7 +191,7 @@ export const universalSearch = async (req, res) => {
     const targetIdToFind = matchedProductIdFromReqId || objectIdQuery;
     if (targetIdToFind && !finalRfqs.some(r => r._id.toString() === targetIdToFind.toString())) {
       const directDoc = await productSchema
-        .findById(targetIdToFind)
+        .findOne({ _id: targetIdToFind, draft: false, isDelete: { $ne: true } })
         .select('title description quantity minimumBudget brand brandName categoryId image createdAt items bidExpiryDate userId')
         .populate('categoryId', 'categoryName')
         .populate('userId', 'firstName lastName currentLocation address')
@@ -257,8 +225,8 @@ export const universalSearch = async (req, res) => {
         });
       }
     });
-    // From matched products & RFQs brand / brandName
-    (productsRes || []).concat(rfqsRes || []).forEach(p => {
+    // From matched RFQs brand / brandName
+    (finalRfqs || []).forEach(p => {
       if (p.brand && regex.test(p.brand)) brandSet.add(p.brand.trim());
       if (p.brandName && regex.test(p.brandName)) brandSet.add(p.brandName.trim());
     });
@@ -271,7 +239,7 @@ export const universalSearch = async (req, res) => {
     return ApiResponse.successResponse(res, 200, 'Universal search results', {
       categories: categoriesRes || [],
       suppliers: sortedSuppliers || [],
-      products: productsRes || [],
+      products: [],
       rfqs: enrichedRfqs || [],
       brands: matchingBrands || [],
     });

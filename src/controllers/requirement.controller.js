@@ -418,8 +418,8 @@ export const getRequirementById = async (req, res) => {
       return ApiResponse.errorResponse(res, 400, 'User not authenticated');
     }
 
-    const requirement = await requirementSchema
-      .findById(id)
+    let requirement = await requirementSchema
+      .findOne({ $or: [{ _id: id }, { productId: id }] })
       .populate({
         path: 'productId',
         populate: { path: 'categoryId', select: '-subCategories' },

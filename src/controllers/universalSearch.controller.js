@@ -196,8 +196,23 @@ export const universalSearch = async (req, res) => {
     const otherSuppliers = (suppliersRes || []).filter(s => s.verificationStatus !== 'verified');
     const sortedSuppliers = [...verifiedSuppliers, ...otherSuppliers];
 
+    // Ensure exact ID match is prepended if not already returned by rfqOpenFilter
+    let finalRfqs = [...(rfqsRes || [])];
+    const targetIdToFind = matchedProductIdFromReqId || objectIdQuery;
+    if (targetIdToFind && !finalRfqs.some(r => r._id.toString() === targetIdToFind.toString())) {
+      const directDoc = await productSchema
+        .findById(targetIdToFind)
+        .select('title description quantity minimumBudget brand brandName categoryId image createdAt items bidExpiryDate userId')
+        .populate('categoryId', 'categoryName')
+        .populate('userId', 'firstName lastName currentLocation address')
+        .lean();
+      if (directDoc) {
+        finalRfqs.unshift(directDoc);
+      }
+    }
+
     // Map Requirement IDs for matched RFQs so frontend can route to Requirement Overview page
-    const rfqProductIds = (rfqsRes || []).map(r => r._id);
+    const rfqProductIds = finalRfqs.map(r => r._id);
     const reqDocs = rfqProductIds.length > 0
       ? await requirementSchema.find({ productId: { $in: rfqProductIds } }).select('_id productId').lean()
       : [];
@@ -205,9 +220,9 @@ export const universalSearch = async (req, res) => {
     const reqMap = new Map();
     reqDocs.forEach(rd => reqMap.set(rd.productId.toString(), rd._id.toString()));
 
-    const enrichedRfqs = (rfqsRes || []).map(r => ({
+    const enrichedRfqs = finalRfqs.map(r => ({
       ...r,
-      requirementId: reqMap.get(r._id.toString()) || null,
+      requirementId: reqMap.get(r._id.toString()) || (objectIdQuery && r._id.toString() === objectIdQuery.toString() ? objectIdQuery.toString() : null),
     }));
 
     // Extract matching distinct brand names

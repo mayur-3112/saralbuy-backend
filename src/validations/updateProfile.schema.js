@@ -33,4 +33,5 @@ export const updateProfileSchema = z.object({
   primaryCategoryId: z.string().trim().optional().nullable(),
   secondaryCategoryIds: z.union([z.array(z.string()), z.string()]).optional(),
   supplierHeadline: z.string().trim().max(300).optional(),
+  topBrands: z.union([z.array(z.string().trim().max(100)).max(10), z.string()]).optional(),
 });

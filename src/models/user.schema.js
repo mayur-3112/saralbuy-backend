@@ -62,6 +62,8 @@ const userSchema = new mongoose.Schema(
     primaryCategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
     secondaryCategoryIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
     supplierHeadline: { type: String, default: null, trim: true },
+    // Brand names the supplier deals in — shown on showcase cards for buyer relevance.
+    topBrands: [{ type: String, trim: true }],
 
     // Supplier "Organisation Details" — profile/storefront-style fields.
     // All optional at the schema level (existing users without them just

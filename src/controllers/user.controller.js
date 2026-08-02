@@ -332,6 +332,7 @@ export const updateProfile = async (req, res) => {
       primaryCategoryId,
       secondaryCategoryIds,
       supplierHeadline,
+      topBrands,
     } = req.body;
 
     const profilePic = req.files?.image?.[0];
@@ -390,6 +391,15 @@ export const updateProfile = async (req, res) => {
       }
     }
     if (supplierHeadline !== undefined) updates.supplierHeadline = supplierHeadline;
+    if (topBrands !== undefined) {
+      try {
+        updates.topBrands = typeof topBrands === 'string'
+          ? JSON.parse(topBrands)
+          : (Array.isArray(topBrands) ? topBrands : []);
+      } catch (_) {
+        updates.topBrands = [];
+      }
+    }
 
     const user = await userSchema
       .findByIdAndUpdate(req.user.userId, { $set: updates }, { new: true })
@@ -572,7 +582,7 @@ export const getPublicSuppliers = async (req, res) => {
       .select(
         'firstName lastName businessName organizationName profileImage currentLocation address ' +
         'verificationStatus accountRole businessDescription supplierCategories primaryCategoryId ' +
-        'secondaryCategoryIds supplierHeadline businessSince createdAt'
+        'secondaryCategoryIds supplierHeadline topBrands businessSince createdAt'
       )
       .populate('primaryCategoryId', 'categoryName icon')
       .populate('secondaryCategoryIds', 'categoryName icon')

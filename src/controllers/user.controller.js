@@ -246,7 +246,11 @@ export const getProfile = async (req, res) => {
         cachedUser
       );
     }
-    const user = await userSchema.findById(req.user._id).select('-password');
+    const user = await userSchema
+      .findById(req.user._id)
+      .select('-password')
+      .populate('primaryCategoryId', 'categoryName icon')
+      .populate('secondaryCategoryIds', 'categoryName icon');
     if (!user) return res.status(404).json({ message: 'User not found' });
     await redisHelper.set(`user_${req.user._id}`, user, 24 * 60 * 60);
     return ApiResponse.successResponse(res, 200, 'user fetched successfully', user);
@@ -290,7 +294,11 @@ export const getUserProfile = async (req, res) => {
       // completed deal has already lifted anonymity between the two of them:
       (isOwner || dealClosedWithRequester ? '' : '-email -phone -address');
 
-    const user = await userSchema.findById(userId).select(publicFields.trim());
+    const user = await userSchema
+      .findById(userId)
+      .select(publicFields.trim())
+      .populate('primaryCategoryId', 'categoryName icon')
+      .populate('secondaryCategoryIds', 'categoryName icon');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.status(200).json({ ...user.toObject(), contactRevealed: isOwner || dealClosedWithRequester });
   } catch (err) {
